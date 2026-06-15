@@ -120,9 +120,9 @@ export default async function Page() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <img
-              src="/WC26Logo.png"
+              src="https://media.api-sports.io/football/leagues/1.png"
               alt="FIFA World Cup 2026"
-              style={{ height: '44px', width: 'auto', objectFit: 'contain', display: 'block' }}
+              style={{ height: '36px', width: 'auto', objectFit: 'contain', display: 'block' }}
             />
             <div style={{
               width: '1px',
