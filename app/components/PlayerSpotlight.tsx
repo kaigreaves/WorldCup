@@ -7,6 +7,7 @@ interface Props {
   scorers: ApiScorer[];
   assists: ApiScorer[];
   fixtures: ApiFixture[];
+  headless?: boolean;
 }
 
 function getRatingLabel(goals: number, assists: number, matches: number): { text: string; level: number } {
@@ -43,13 +44,32 @@ function SpotlightCard({ player, scorers, assists, fixtures }: {
     <div style={{ background: 'var(--navy-2)', border: '1px solid var(--gold-border)', borderRadius: '2px', overflow: 'hidden' }}>
       <div style={{ height: '4px', background: `linear-gradient(to right, ${player.color}, transparent)`, opacity: 0.8 }} />
       <div style={{ padding: '24px' }}>
-        <div style={{ marginBottom: '16px' }}>
-          <p style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: '4px' }}>
-            {player.teamTla} · {player.role}
-          </p>
-          <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.5rem', fontWeight: 400, margin: 0, color: 'var(--white)' }}>
-            {player.fullName}
-          </h3>
+        <div style={{ marginBottom: '16px', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+          {/* Headshot */}
+          {player.playerPhoto && (
+            <div style={{ flexShrink: 0, width: '56px', height: '56px', borderRadius: '2px', overflow: 'hidden', border: '1px solid var(--gold-border)' }}>
+              <img
+                src={player.playerPhoto}
+                alt={player.fullName}
+                width={56}
+                height={56}
+                style={{ objectFit: 'cover', objectPosition: 'top center', width: '100%', height: '100%', filter: 'brightness(0.9)' }}
+              />
+            </div>
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '4px' }}>
+              {player.teamLogo && (
+                <img src={player.teamLogo} alt={player.teamName} width={16} height={16} style={{ objectFit: 'contain', flexShrink: 0 }} />
+              )}
+              <p style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--gold)', margin: 0 }}>
+                {player.teamTla} · {player.role}
+              </p>
+            </div>
+            <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.5rem', fontWeight: 400, margin: 0, color: 'var(--white)' }}>
+              {player.fullName}
+            </h3>
+          </div>
         </div>
 
         <div style={{ marginBottom: '20px' }}>
@@ -105,17 +125,19 @@ function SpotlightCard({ player, scorers, assists, fixtures }: {
   );
 }
 
-export default function PlayerSpotlight({ players, scorers, assists, fixtures }: Props) {
+export default function PlayerSpotlight({ players, scorers, assists, fixtures, headless }: Props) {
   return (
     <section>
-      <div className="mb-8">
-        <p className="label mb-3">Under The Lens</p>
-        <h2 style={{ fontSize: '2.5rem', color: 'var(--white)' }}>Player Spotlight</h2>
-        <div className="gold-line mt-4" />
-        <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '10px', fontStyle: 'italic' }}>
-          Mbappé and Messi always. The other three go to whoever the tournament is talking about.
-        </p>
-      </div>
+      {!headless && (
+        <div className="mb-8">
+          <p className="label mb-3">Under The Lens</p>
+          <h2 style={{ fontSize: '2.5rem', color: 'var(--white)' }}>Player Spotlight</h2>
+          <div className="gold-line mt-4" />
+          <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '10px', fontStyle: 'italic' }}>
+            Mbappé and Messi always. The other three go to whoever the tournament is talking about.
+          </p>
+        </div>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '12px' }}>
         {players.map(player => (
           <SpotlightCard key={player.nameFragment} player={player} scorers={scorers} assists={assists} fixtures={fixtures} />

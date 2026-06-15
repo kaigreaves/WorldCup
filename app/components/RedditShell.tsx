@@ -164,7 +164,7 @@ const ACCOLADES = [
   'Unavoidable', 'Making Noise', 'Rising', 'In Focus', 'Catching Eyes',
 ];
 
-export function PerformersSection() {
+export function PerformersSection({ headless, playerMeta = {} }: { headless?: boolean; playerMeta?: Record<string, { photo?: string; teamLogo?: string }> } = {}) {
   const [performers, setPerformers] = useState<PerformerEntry[] | null>(null);
   const [fetchedAt, setFetchedAt] = useState<string>('');
 
@@ -186,15 +186,17 @@ export function PerformersSection() {
 
   return (
     <section>
-      <div className="mb-8">
-        <p className="label mb-3">The Standouts</p>
-        <h2 style={{ fontSize: '2.5rem', color: 'var(--white)' }}>Performers of the Day</h2>
-        <div className="gold-line mt-4" />
-        <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '10px', fontStyle: 'italic' }}>
-          Driven by Reddit — whoever fans are raving about most
-          {fetchedAt && ` · Updated ${timeAgo(fetchedAt)}`}
-        </p>
-      </div>
+      {!headless && (
+        <div className="mb-8">
+          <p className="label mb-3">The Standouts</p>
+          <h2 style={{ fontSize: '2.5rem', color: 'var(--white)' }}>Performers of the Day</h2>
+          <div className="gold-line mt-4" />
+          <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '10px', fontStyle: 'italic' }}>
+            Driven by Reddit — whoever fans are raving about most
+            {fetchedAt && ` · Updated ${timeAgo(fetchedAt)}`}
+          </p>
+        </div>
+      )}
 
       {!performers ? (
         <div style={{ padding: '40px', border: '1px solid var(--gold-border)', borderRadius: '2px', textAlign: 'center' }}>
@@ -209,6 +211,9 @@ export function PerformersSection() {
           {performers.map((p, i) => {
             const buzz = p.mentionCount >= 15 ? 'Dominant' : p.mentionCount >= 8 ? 'High' : 'Growing';
             const buzzColor = buzz === 'Dominant' ? '#4ade80' : buzz === 'High' ? 'var(--gold)' : 'var(--muted)';
+            // Look up flag + photo by last name or full name
+            const lastName = p.name.split(' ').pop()?.toLowerCase() ?? '';
+            const meta = playerMeta[p.name.toLowerCase()] ?? playerMeta[lastName];
             return (
               <div key={p.name} style={{
                 background: 'var(--navy-2)', border: '1px solid var(--gold-border)',
@@ -224,9 +229,21 @@ export function PerformersSection() {
                       {buzz} buzz
                     </span>
                   </div>
-                  <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.5rem', fontWeight: 400, margin: '0 0 6px 0', color: 'var(--white)' }}>
-                    {p.name}
-                  </h3>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '6px' }}>
+                    {meta?.photo && (
+                      <div style={{ flexShrink: 0, width: '44px', height: '44px', borderRadius: '2px', overflow: 'hidden', border: '1px solid var(--gold-border)' }}>
+                        <img src={meta.photo} alt={p.name} width={44} height={44} style={{ objectFit: 'cover', objectPosition: 'top center', width: '100%', height: '100%' }} />
+                      </div>
+                    )}
+                    <div>
+                      {meta?.teamLogo && (
+                        <img src={meta.teamLogo} alt="" width={16} height={16} style={{ objectFit: 'contain', marginBottom: '4px', display: 'block' }} />
+                      )}
+                      <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.5rem', fontWeight: 400, margin: 0, color: 'var(--white)' }}>
+                        {p.name}
+                      </h3>
+                    </div>
+                  </div>
                   <div style={{ display: 'flex', gap: '16px', marginBottom: '14px' }}>
                     {[['mentions', p.mentionCount], ['fan score', Math.round(p.weightedScore).toLocaleString()]].map(([label, val]) => (
                       <div key={String(label)}>
@@ -248,7 +265,7 @@ export function PerformersSection() {
 
 // ── Fan Voice section ─────────────────────────────────────────────────────────
 
-export function FanVoiceSection() {
+export function FanVoiceSection({ headless }: { headless?: boolean } = {}) {
   const [data, setData] = useState<{ comments: RedditComment[]; threads: number; fetchedAt: string } | null>(null);
 
   const apply = (d: RedditClientData) => setData({ comments: d.fanVoiceComments, threads: d.threads.length, fetchedAt: d.fetchedAt });
@@ -266,16 +283,18 @@ export function FanVoiceSection() {
 
   return (
     <section>
-      <div className="mb-8">
-        <p className="label mb-3">The Crowd</p>
-        <h2 style={{ fontSize: '2.5rem', color: 'var(--white)' }}>Fan Voice</h2>
-        <div className="gold-line mt-4" />
-        {data && (
-          <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '10px', fontStyle: 'italic' }}>
-            Top comments from r/soccer &amp; r/worldcup · {data.threads} threads · Updated {timeAgo(data.fetchedAt)}
-          </p>
-        )}
-      </div>
+      {!headless && (
+        <div className="mb-8">
+          <p className="label mb-3">The Crowd</p>
+          <h2 style={{ fontSize: '2.5rem', color: 'var(--white)' }}>Fan Voice</h2>
+          <div className="gold-line mt-4" />
+          {data && (
+            <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '10px', fontStyle: 'italic' }}>
+              Top comments from r/soccer &amp; r/worldcup · {data.threads} threads · Updated {timeAgo(data.fetchedAt)}
+            </p>
+          )}
+        </div>
+      )}
 
       {!data ? (
         <div style={{ padding: '40px', border: '1px solid var(--gold-border)', borderRadius: '2px', textAlign: 'center' }}>

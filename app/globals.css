@@ -103,6 +103,39 @@ nav a:hover {
   50% { opacity: 0.3; }
 }
 
+/* Fixed right sidebar — always visible like Claude's sidebar */
+.sidebar-fixed {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .sidebar-fixed {
+    display: block;
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 300px;
+    height: 100vh;
+    border-left: 1px solid var(--gold-border);
+    background: var(--navy);
+    overflow-y: auto;
+    z-index: 50;
+    padding: 112px 24px 24px; /* clears header (64px) + nav (48px) */
+  }
+  .sidebar-fixed::-webkit-scrollbar { width: 3px; }
+  .sidebar-fixed::-webkit-scrollbar-thumb { background: var(--gold-border); }
+
+  /* Push main content left to avoid overlap */
+  .main-with-sidebar {
+    margin-right: 300px;
+  }
+}
+
+/* Bottom nav bar spacing */
+.has-bottom-nav {
+  padding-bottom: 68px;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: var(--navy); }
