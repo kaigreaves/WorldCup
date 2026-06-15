@@ -3,14 +3,17 @@ import {
   getTopScorers,
   getTopAssists,
   computeGreatness,
+  buildStorylines,
+  buildSpotlightPlayers,
   getUpcomingFixtures,
   getFinishedFixtures,
   getLiveFixtures,
 } from './lib/api';
+import Storylines from './components/Storylines';
 import GreatnessLeaderboard from './components/GreatnesLeaderboard';
 import Matches from './components/Matches';
 import PlayerSpotlight from './components/PlayerSpotlight';
-import { RedditDataLoader, RedditLoadingBanner, PerformersSection, FanVoiceSection } from './components/RedditShell';
+import { RedditDataLoader, PerformersSection, FanVoiceSection } from './components/RedditShell';
 
 export default async function Page() {
   const [fixtures, scorers, assists] = await Promise.all([
@@ -24,58 +27,57 @@ export default async function Page() {
   const allAssists = assists ?? [];
 
   const greatnessEntries = computeGreatness(allScorers, allAssists);
+  const storylines = buildStorylines(greatnessEntries);
+  const spotlightPlayers = buildSpotlightPlayers(greatnessEntries);
   const upcomingMatches = getUpcomingFixtures(allFixtures);
   const finishedMatches = getFinishedFixtures(allFixtures);
   const liveMatches = getLiveFixtures(allFixtures);
 
-  // Fixture list passed to client-side Reddit loader
   const fixturesForReddit = [
     ...finishedMatches.map(f => ({ homeTeam: f.teams.home.name, awayTeam: f.teams.away.name, isFinished: true })),
+    ...liveMatches.map(f => ({ homeTeam: f.teams.home.name, awayTeam: f.teams.away.name, isFinished: false })),
     ...upcomingMatches.map(f => ({ homeTeam: f.teams.home.name, awayTeam: f.teams.away.name, isFinished: false })),
   ];
 
   const today = new Date().toLocaleDateString('en-GB', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
+
+  const matchesPlayed = allFixtures.filter(f => f.fixture.status.short === 'FT').length;
+  const isLive = liveMatches.length > 0;
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--navy)' }}>
+
       {/* Header */}
-      <header
-        style={{
-          borderBottom: '1px solid var(--gold-border)',
-          padding: '0 clamp(20px, 4vw, 48px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          height: '72px',
-          position: 'sticky',
-          top: 0,
-          background: 'var(--navy)',
-          zIndex: 100,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <div style={{ display: 'flex', height: '22px', gap: '3px' }}>
-            <div style={{ width: '7px', background: 'var(--blue)', borderRadius: '1px' }} />
-            <div style={{ width: '7px', background: 'var(--white)', opacity: 0.9, borderRadius: '1px' }} />
-            <div style={{ width: '7px', background: 'var(--red)', borderRadius: '1px' }} />
+      <header style={{
+        borderBottom: '1px solid var(--gold-border)',
+        padding: '0 clamp(20px, 4vw, 48px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        height: '64px',
+        position: 'sticky',
+        top: 0,
+        background: 'var(--navy)',
+        zIndex: 100,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', height: '20px', gap: '3px' }}>
+            <div style={{ width: '6px', background: 'var(--blue)', borderRadius: '1px' }} />
+            <div style={{ width: '6px', background: 'var(--white)', opacity: 0.9, borderRadius: '1px' }} />
+            <div style={{ width: '6px', background: 'var(--red)', borderRadius: '1px' }} />
           </div>
           <div>
-            <div
-              style={{
-                fontFamily: 'Cormorant Garamond, serif',
-                fontSize: '1rem',
-                fontWeight: 500,
-                letterSpacing: '0.1em',
-                color: 'var(--white)',
-                lineHeight: 1,
-                textTransform: 'uppercase',
-              }}
-            >
+            <div style={{
+              fontFamily: 'Cormorant Garamond, serif',
+              fontSize: '0.95rem',
+              fontWeight: 500,
+              letterSpacing: '0.1em',
+              color: 'var(--white)',
+              lineHeight: 1,
+              textTransform: 'uppercase',
+            }}>
               The Story of Greatness
             </div>
             <div style={{ fontSize: '9px', letterSpacing: '0.25em', color: 'var(--gold)', textTransform: 'uppercase', marginTop: '3px' }}>
@@ -83,108 +85,102 @@ export default async function Page() {
             </div>
           </div>
         </div>
-        <div style={{ fontSize: '12px', color: 'var(--muted)', letterSpacing: '0.03em' }}>
-          {today}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {isLive && (
+            <span style={{
+              fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase',
+              color: '#4ade80', display: 'flex', alignItems: 'center', gap: '6px',
+            }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ade80', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
+              Live
+            </span>
+          )}
+          <span style={{ fontSize: '11px', color: 'var(--muted)', letterSpacing: '0.03em' }}>{today}</span>
         </div>
       </header>
 
-      {/* Hero */}
-      <div
-        style={{
-          padding: '80px clamp(20px, 4vw, 48px) 64px',
-          borderBottom: '1px solid var(--gold-border)',
-          background: 'linear-gradient(180deg, var(--navy-2) 0%, var(--navy) 100%)',
-        }}
-      >
-        <p className="label" style={{ marginBottom: '16px', opacity: 0.7 }}>
-          Where history is decided
-        </p>
-        <h1
-          style={{
-            fontFamily: 'Cormorant Garamond, serif',
-            fontSize: 'clamp(2.6rem, 5.5vw, 4.8rem)',
-            fontWeight: 300,
-            lineHeight: 1.08,
-            color: 'var(--white)',
-            maxWidth: '680px',
-            margin: '0 0 24px 0',
-          }}
-        >
-          The World Cup is not a tournament.
-          <br />
-          <em style={{ color: 'var(--gold)', fontWeight: 300 }}>It is a verdict.</em>
-        </h1>
-        <p
-          style={{
-            fontSize: '15px',
-            color: 'var(--muted)',
-            maxWidth: '500px',
-            lineHeight: '1.75',
-            fontStyle: 'italic',
-            margin: 0,
-          }}
-        >
-          Every match writes or rewrites a legacy. We track the greatness — who&apos;s rising,
-          who&apos;s defining their era, and who the tournament will remember.
-        </p>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '36px' }}>
-          <div
-            style={{
-              width: '6px',
-              height: '6px',
-              borderRadius: '50%',
-              background: allFixtures.length > 0 ? '#4ade80' : 'rgba(255,255,255,0.2)',
-            }}
-          />
-          <span style={{ fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>
-            {allFixtures.length > 0 ? `Live · ${allFixtures.filter(f => f.fixture.status.short === 'FT').length} matches played` : 'Awaiting tournament data'}
-          </span>
-        </div>
-      </div>
-
       {/* Nav */}
-      <nav
-        style={{
-          padding: '0 clamp(20px, 4vw, 48px)',
-          borderBottom: '1px solid var(--gold-border)',
-          display: 'flex',
-          gap: '32px',
-          overflowX: 'auto',
-        }}
-      >
+      <nav style={{
+        padding: '0 clamp(20px, 4vw, 48px)',
+        borderBottom: '1px solid var(--gold-border)',
+        display: 'flex',
+        gap: '28px',
+        overflowX: 'auto',
+      }}>
         {[
-          ['Greatness Leaderboard', '#leaderboard'],
+          ['The Story', '#storylines'],
+          ['Legacy', '#leaderboard'],
           ['Matches', '#matches'],
-          ['Performers', '#performers'],
           ['Fan Voice', '#fanvoice'],
           ['Spotlight', '#spotlight'],
         ].map(([label, href]) => (
-          <a
-            key={href}
-            href={href}
-            style={{
-              fontSize: '10px',
-              letterSpacing: '0.18em',
-              textTransform: 'uppercase',
-              color: 'var(--muted)',
-              padding: '18px 0',
-              whiteSpace: 'nowrap',
-              textDecoration: 'none',
-            }}
-          >
+          <a key={href} href={href} style={{
+            fontSize: '10px',
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            color: 'var(--muted)',
+            padding: '16px 0',
+            whiteSpace: 'nowrap',
+            textDecoration: 'none',
+          }}>
             {label}
           </a>
         ))}
       </nav>
 
-      {/* Main content */}
-      <main style={{ padding: '72px clamp(20px, 4vw, 48px)', maxWidth: '1400px', margin: '0 auto' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '72px' }}>
+      {/* Hero */}
+      <div style={{
+        padding: '64px clamp(20px, 4vw, 48px) 56px',
+        borderBottom: '1px solid var(--gold-border)',
+        background: 'linear-gradient(180deg, var(--navy-2) 0%, var(--navy) 100%)',
+      }}>
+        <p className="label" style={{ marginBottom: '16px', opacity: 0.7 }}>
+          Where legacies are written
+        </p>
+        <h1 style={{
+          fontFamily: 'Cormorant Garamond, serif',
+          fontSize: 'clamp(2.4rem, 5vw, 4.4rem)',
+          fontWeight: 300,
+          lineHeight: 1.1,
+          color: 'var(--white)',
+          maxWidth: '700px',
+          margin: '0 0 20px 0',
+        }}>
+          It is not the critic who counts.
+          <br />
+          <em style={{ color: 'var(--gold)', fontWeight: 300 }}>It is the man in the arena.</em>
+        </h1>
+        <p style={{
+          fontSize: '14px',
+          color: 'var(--muted)',
+          maxWidth: '480px',
+          lineHeight: '1.8',
+          margin: 0,
+        }}>
+          Every match writes or rewrites a legacy. We track who is delivering when it counts —
+          told through the eyes of the fans watching it happen.
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '32px' }}>
+          <div style={{
+            width: '6px', height: '6px', borderRadius: '50%',
+            background: matchesPlayed > 0 ? '#4ade80' : 'rgba(255,255,255,0.2)',
+          }} />
+          <span style={{ fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+            {matchesPlayed > 0 ? `${matchesPlayed} matches played` : 'Awaiting tournament data'}
+            {isLive && ` · ${liveMatches.length} match${liveMatches.length > 1 ? 'es' : ''} live now`}
+          </span>
+        </div>
+      </div>
 
-          {/* Client-side Reddit loader — fires once, hydrates all comment sections */}
-          <RedditDataLoader fixtures={fixturesForReddit} />
-          <RedditLoadingBanner />
+      {/* Main */}
+      <main style={{ padding: '64px clamp(20px, 4vw, 48px)', maxWidth: '1200px', margin: '0 auto' }}>
+        <RedditDataLoader fixtures={fixturesForReddit} />
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '80px' }}>
+
+          <div id="storylines">
+            <Storylines storylines={storylines} />
+          </div>
 
           <div id="leaderboard">
             <GreatnessLeaderboard entries={greatnessEntries} />
@@ -194,51 +190,52 @@ export default async function Page() {
             <Matches upcoming={upcomingMatches} finished={finishedMatches} live={liveMatches} />
           </div>
 
-          <div id="performers">
+          <div id="fanvoice">
             <PerformersSection />
           </div>
 
-          <div id="fanvoice">
+          <div>
             <FanVoiceSection />
           </div>
 
           <div id="spotlight">
-            <PlayerSpotlight scorers={allScorers} assists={allAssists} fixtures={allFixtures} />
+            <PlayerSpotlight
+              players={spotlightPlayers}
+              scorers={allScorers}
+              assists={allAssists}
+              fixtures={allFixtures}
+            />
           </div>
 
         </div>
       </main>
 
       {/* Footer */}
-      <footer
-        style={{
-          borderTop: '1px solid var(--gold-border)',
-          padding: '32px clamp(20px, 4vw, 48px)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
+      <footer style={{
+        borderTop: '1px solid var(--gold-border)',
+        padding: '28px clamp(20px, 4vw, 48px)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+      }}>
         <div>
-          <p
-            style={{
-              fontFamily: 'Cormorant Garamond, serif',
-              fontSize: '1rem',
-              color: 'var(--gold)',
-              margin: 0,
-              letterSpacing: '0.05em',
-            }}
-          >
+          <p style={{
+            fontFamily: 'Cormorant Garamond, serif',
+            fontSize: '1rem',
+            color: 'var(--gold)',
+            margin: 0,
+            letterSpacing: '0.05em',
+          }}>
             The Story of Greatness
           </p>
           <p style={{ fontSize: '11px', color: 'var(--muted)', margin: '4px 0 0 0' }}>
-            Data via api-sports.io & Reddit · Updated live · FIFA World Cup 2026
+            Stats via api-sports.io · Fan voice via Reddit · FIFA World Cup 2026
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '4px', height: '28px' }}>
-          <div style={{ width: '8px', background: 'var(--blue)', opacity: 0.7, borderRadius: '1px' }} />
-          <div style={{ width: '8px', background: 'var(--white)', opacity: 0.4, borderRadius: '1px' }} />
-          <div style={{ width: '8px', background: 'var(--red)', opacity: 0.7, borderRadius: '1px' }} />
+        <div style={{ display: 'flex', gap: '4px', height: '24px' }}>
+          <div style={{ width: '7px', background: 'var(--blue)', opacity: 0.7, borderRadius: '1px' }} />
+          <div style={{ width: '7px', background: 'var(--white)', opacity: 0.4, borderRadius: '1px' }} />
+          <div style={{ width: '7px', background: 'var(--red)', opacity: 0.7, borderRadius: '1px' }} />
         </div>
       </footer>
     </div>

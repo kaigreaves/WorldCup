@@ -1,8 +1,9 @@
 import type { ApiScorer, ApiFixture, SpotlightConfig } from '../lib/api';
-import { SPOTLIGHT_PLAYERS, findSpotlightStats, getTeamFixtures } from '../lib/api';
+import { findSpotlightStats, getTeamFixtures } from '../lib/api';
 import { PlayerFanComment } from './RedditShell';
 
 interface Props {
+  players: SpotlightConfig[];
   scorers: ApiScorer[];
   assists: ApiScorer[];
   fixtures: ApiFixture[];
@@ -68,12 +69,11 @@ function SpotlightCard({ player, scorers, assists, fixtures }: {
           ))}
         </div>
 
-        {/* Fan comment, falls back to legacy context */}
         <div style={{ marginBottom: '20px' }}>
           <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: '8px' }}>
             What fans are saying
           </p>
-          <PlayerFanComment playerName={player.fullName} fallback={player.legacyContext} />
+          <PlayerFanComment playerName={player.fullName} />
         </div>
 
         {teamFixtures.length > 0 && (
@@ -105,16 +105,19 @@ function SpotlightCard({ player, scorers, assists, fixtures }: {
   );
 }
 
-export default function PlayerSpotlight({ scorers, assists, fixtures }: Props) {
+export default function PlayerSpotlight({ players, scorers, assists, fixtures }: Props) {
   return (
     <section>
       <div className="mb-8">
-        <p className="label mb-3">The Chosen Few</p>
+        <p className="label mb-3">Under The Lens</p>
         <h2 style={{ fontSize: '2.5rem', color: 'var(--white)' }}>Player Spotlight</h2>
         <div className="gold-line mt-4" />
+        <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '10px', fontStyle: 'italic' }}>
+          Mbappé and Messi always. The other three go to whoever the tournament is talking about.
+        </p>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '12px' }}>
-        {SPOTLIGHT_PLAYERS.map(player => (
+        {players.map(player => (
           <SpotlightCard key={player.nameFragment} player={player} scorers={scorers} assists={assists} fixtures={fixtures} />
         ))}
       </div>

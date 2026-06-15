@@ -77,6 +77,77 @@ export async function getTopAssists(): Promise<ApiScorer[] | null> {
   return apiFetch<ApiScorer[]>(`/players/topassists?league=${LEAGUE}&season=${SEASON}`);
 }
 
+// ── Storylines ────────────────────────────────────────────────────────────────
+
+export interface Storyline {
+  id: string;
+  tag: string;
+  headline: string;
+  context: string;
+  playerName: string;
+  teamName: string;
+}
+
+function storyTag(name: string, goals: number, assists: number): string {
+  const n = name.toLowerCase();
+  if (n.includes('messi')) return 'The Final Chapter';
+  if (n.includes('mbappe') || n.includes('mbappé')) return 'The Favourite';
+  if (n.includes('ronaldo') || n.includes('cr7')) return 'One Last Run';
+  if (goals >= 4) return 'Untouchable';
+  if (goals >= 2 && assists >= 1) return 'In Full Flight';
+  if (assists >= 3) return 'The Architect';
+  if (goals >= 2) return 'Making His Case';
+  if (goals === 1) return 'First Blood';
+  if (assists >= 1) return 'The Enabler';
+  return 'Watch This Space';
+}
+
+function storyHeadline(name: string, goals: number, assists: number, _matches: number, team: string): string {
+  const n = name.toLowerCase();
+  const shortName = name.split(/\s+/).pop() ?? name;
+  if (n.includes('messi')) {
+    if (goals >= 3) return `Messi is refusing to let this be his last World Cup story. ${goals} goals. This is a farewell nobody asked for.`;
+    if (goals >= 1) return `Messi has scored. That still means something different to everything else happening on this pitch.`;
+    return `Messi hasn't found his goal yet. The wait only makes it heavier.`;
+  }
+  if (n.includes('mbappe') || n.includes('mbappé')) {
+    if (goals >= 3) return `Mbappé is doing it again. France are his team and this is his tournament to own.`;
+    if (goals >= 1) return `Mbappé is on the board. The rest of this World Cup is on notice.`;
+    return `Mbappé hasn't scored yet. Which only means the world is still waiting.`;
+  }
+  if (goals >= 4) return `${name} is the best player at this World Cup right now. It's not a debate.`;
+  if (goals >= 3) return `${shortName} has ${goals} goals. ${team} are going deep because of him.`;
+  if (goals >= 2 && assists >= 1) return `${shortName}: ${goals} goals, ${assists} assists. He's carrying ${team} and making it look easy.`;
+  if (goals >= 2) return `${shortName} has ${goals} goals in the tournament. ${team} go as far as he takes them.`;
+  if (goals === 1 && assists >= 2) return `${shortName} doesn't need the headlines. The assists column is telling the real story.`;
+  if (goals === 1) return `${shortName} is on the board. The question now is whether this is the start of something.`;
+  if (assists >= 2) return `${shortName} isn't finishing but he's making everything happen for ${team}.`;
+  return `${shortName} is here. The tournament will have its say on his legacy soon enough.`;
+}
+
+function storyContext(name: string, goals: number, assists: number): string {
+  const n = name.toLowerCase();
+  if (n.includes('messi')) return 'Every minute on this pitch is borrowed time. He plays like he knows it. Nobody wants it to end.';
+  if (n.includes('mbappe') || n.includes('mbappé')) return "He was the best player at the last World Cup at 19. He's 27 now. This is the peak.";
+  if (goals >= 4) return "This is what it looks like when a player is in the middle of their defining tournament. You only fully understand it later.";
+  if (goals >= 2 && assists >= 1) return "Goals and assists at a World Cup. That's the complete picture of a player operating at his ceiling.";
+  if (goals >= 2) return "Two World Cup goals is a resume line. Three is a legacy. He's already past the first marker.";
+  if (goals === 1) return "He opened his account. In a tournament that moves this fast, the first one always matters.";
+  if (assists >= 2) return "The assists don't always make the front page. They should. Goals don't happen without him.";
+  return "The tournament isn't finished writing his story. These are the arcs worth following.";
+}
+
+export function buildStorylines(entries: GreatnessEntry[]): Storyline[] {
+  return entries.slice(0, 5).map(e => ({
+    id: String(e.player.id),
+    tag: storyTag(e.player.name, e.goals, e.assists),
+    headline: storyHeadline(e.player.name, e.goals, e.assists, e.matches, e.team.name),
+    context: storyContext(e.player.name, e.goals, e.assists),
+    playerName: e.player.name,
+    teamName: e.team.name,
+  }));
+}
+
 // ── Derived helpers ───────────────────────────────────────────────────────────
 
 const LIVE_STATUSES = new Set(['1H', '2H', 'HT', 'ET', 'BT', 'P', 'INT', 'LIVE', 'SUSP']);
@@ -208,14 +279,14 @@ export interface SpotlightConfig {
   color: string;
 }
 
-export const SPOTLIGHT_PLAYERS: SpotlightConfig[] = [
+const FIXED_SPOTLIGHT: SpotlightConfig[] = [
   {
     fullName: 'Kylian Mbappé',
     nameFragment: 'mbappe',
     teamName: 'France',
     teamTla: 'FRA',
     role: 'Forward',
-    legacyContext: 'Already the most expensive player in history. This tournament is his coronation — or his question mark. Every knockout match, every defining moment belongs to him.',
+    legacyContext: 'Already the most expensive player in history. This tournament is his coronation — or his question mark.',
     color: '#002395',
   },
   {
@@ -224,37 +295,37 @@ export const SPOTLIGHT_PLAYERS: SpotlightConfig[] = [
     teamName: 'Argentina',
     teamTla: 'ARG',
     role: 'Forward',
-    legacyContext: 'The 2022 title changed the debate forever. But Messi refuses to let it end. Each appearance now carries the weight of a farewell the world isn\'t ready for.',
+    legacyContext: 'The 2022 title changed the debate forever. But Messi refuses to let it end.',
     color: '#74ACDF',
   },
-  {
-    fullName: 'Jude Bellingham',
-    nameFragment: 'bellingham',
-    teamName: 'England',
-    teamTla: 'ENG',
-    role: 'Midfielder',
-    legacyContext: 'Twenty-two years old and already carrying England\'s most intense hope since 1966. His ceiling is unknown. His ambition, absolute. A World Cup win would make him England\'s greatest.',
-    color: '#CF081F',
-  },
-  {
-    fullName: 'Alphonso Davies',
-    nameFragment: 'davies',
-    teamName: 'Canada',
-    teamTla: 'CAN',
-    role: 'Defender / Winger',
-    legacyContext: 'From a Ghanaian refugee camp to the World Cup stage — Davies\'s story is football\'s most extraordinary narrative. He is not just a player. He is a national moment.',
-    color: '#FF0000',
-  },
-  {
-    fullName: 'Michael Olise',
-    nameFragment: 'olise',
-    teamName: 'France',
-    teamTla: 'FRA',
-    role: 'Winger',
-    legacyContext: 'The breakout star waiting to happen. Olise\'s club form has been quietly breathtaking. The World Cup is his moment to step from elite to immortal.',
-    color: '#ED2939',
-  },
 ];
+
+// Accent colours for dynamic spotlight slots
+const DYNAMIC_COLORS = ['#C9A84C', '#ED2939', '#4ade80'];
+
+// Returns Mbappé + Messi always, then the top 3 performers from the leaderboard
+export function buildSpotlightPlayers(entries: GreatnessEntry[]): SpotlightConfig[] {
+  const fixedNames = new Set(FIXED_SPOTLIGHT.map(p => p.nameFragment));
+  const dynamic = entries
+    .filter(e => !fixedNames.has(e.player.name.toLowerCase().replace(/[éèê]/g, 'e').replace(/\s+/g, '')))
+    .slice(0, 3)
+    .map((e, i) => {
+      const nameParts = e.player.name.split(/\s+/);
+      const lastName = nameParts[nameParts.length - 1] ?? e.player.name;
+      return {
+        fullName: e.player.name,
+        nameFragment: lastName.toLowerCase().replace(/[^a-z]/g, ''),
+        teamName: e.team.name,
+        teamTla: e.team.name.substring(0, 3).toUpperCase(),
+        role: 'Forward',
+        legacyContext: storyContext(e.player.name, e.goals, e.assists),
+        color: DYNAMIC_COLORS[i] ?? '#C9A84C',
+      } as SpotlightConfig;
+    });
+  return [...FIXED_SPOTLIGHT, ...dynamic];
+}
+
+export const SPOTLIGHT_PLAYERS = FIXED_SPOTLIGHT;
 
 export function findSpotlightStats(
   player: SpotlightConfig,

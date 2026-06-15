@@ -83,38 +83,24 @@ export function MatchFanComments({
     return () => window.removeEventListener('reddit-data-ready', handler as EventListener);
   }, [homeTeam, awayTeam, isFinished]);
 
-  if (comments === null) return (
-    <div style={{ borderTop: '1px solid var(--gold-border)', paddingTop: '16px' }}>
-      <p className="label" style={{ marginBottom: '8px', color: 'var(--muted)' }}>{label}</p>
-      <Loading />
-    </div>
-  );
+  // Show nothing while comments are loading
+  if (comments === null) return null;
+
+  if (comments.length === 0) return null;
 
   return (
-    <div style={{ borderTop: '1px solid var(--gold-border)', paddingTop: '16px' }}>
+    <div style={{ borderTop: '1px solid var(--gold-border)', paddingTop: '16px', marginTop: '4px' }}>
       <p className="label" style={{ marginBottom: '12px', color: 'var(--muted)' }}>{label}</p>
-      {comments.length > 0 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {comments.map((c, i) => <CommentBlock key={c.id ?? i} comment={c} />)}
-        </div>
-      ) : (
-        <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', fontStyle: 'italic', margin: 0 }}>
-          No Reddit thread found yet.
-        </p>
-      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {comments.map((c, i) => <CommentBlock key={c.id ?? i} comment={c} />)}
+      </div>
     </div>
   );
 }
 
 // ── Player comment (leaderboard + spotlight) ──────────────────────────────────
 
-export function PlayerFanComment({
-  playerName,
-  fallback,
-}: {
-  playerName: string;
-  fallback?: string;
-}) {
+export function PlayerFanComment({ playerName }: { playerName: string }) {
   const [comment, setComment] = useState<RedditComment | null | undefined>(undefined);
 
   const findComment = (data: RedditClientData) => {
@@ -156,22 +142,13 @@ export function PlayerFanComment({
     return () => window.removeEventListener('reddit-data-ready', handler as EventListener);
   }, [playerName]);
 
-  if (comment === undefined) return (
-    <p style={{ fontSize: '12px', color: 'var(--muted)', fontStyle: 'italic', margin: '4px 0 0 0', lineHeight: '1.4' }}>
-      <Loading />
-    </p>
-  );
-
-  if (!comment) return (
-    <p style={{ fontSize: '12px', color: 'var(--muted)', fontStyle: 'italic', margin: '4px 0 0 0', lineHeight: '1.4' }}>
-      {fallback}
-    </p>
-  );
+  // Show nothing while loading or if no comment found
+  if (!comment) return null;
 
   return (
     <div style={{ marginTop: '8px' }}>
       <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.72)', fontStyle: 'italic', lineHeight: '1.55', margin: '0 0 4px 0' }}>
-        &ldquo;{truncate(comment.body, 200)}&rdquo;
+        &ldquo;{truncate(comment.body, 220)}&rdquo;
       </p>
       <span style={{ fontSize: '10px', color: 'var(--gold)', opacity: 0.7 }}>
         ↑ {comment.score.toLocaleString()} · u/{comment.author}
