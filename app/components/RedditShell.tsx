@@ -236,12 +236,14 @@ export function PerformersSection({ headless, playerMeta = {} }: { headless?: bo
                       </div>
                     )}
                     <div>
-                      {meta?.teamLogo && (
-                        <img src={meta.teamLogo} alt="" width={16} height={16} style={{ objectFit: 'contain', marginBottom: '4px', display: 'block' }} />
-                      )}
-                      <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.5rem', fontWeight: 400, margin: 0, color: 'var(--white)' }}>
-                        {p.name}
-                      </h3>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                        {meta?.teamLogo && (
+                          <img src={meta.teamLogo} alt="" width={16} height={16} style={{ objectFit: 'contain', flexShrink: 0 }} />
+                        )}
+                        <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.5rem', fontWeight: 400, margin: 0, color: 'var(--white)' }}>
+                          {p.name}
+                        </h3>
+                      </div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '16px', marginBottom: '14px' }}>

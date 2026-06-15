@@ -5,6 +5,8 @@ import {
   computeGreatness,
   buildStorylines,
   buildSpotlightPlayers,
+  buildTeamFlagMap,
+  PLAYER_TEAM_MAP,
   getUpcomingFixtures,
   getFinishedFixtures,
   getLiveFixtures,
@@ -33,13 +35,22 @@ export default async function Page() {
   const spotlightPlayers = buildSpotlightPlayers(greatnessEntries, allScorers, allAssists);
 
   // Name → { photo, teamLogo } lookup for client components (Performers)
+  const teamFlagMap = buildTeamFlagMap(allFixtures);
   const playerMeta: Record<string, { photo?: string; teamLogo?: string }> = {};
+
+  // Seed from static player→team map so performers get flags even without scorer data
+  for (const [playerKey, teamName] of Object.entries(PLAYER_TEAM_MAP)) {
+    const teamLogo = teamFlagMap[teamName];
+    if (teamLogo) playerMeta[playerKey] = { teamLogo };
+  }
+
+  // Override/enrich with live API data (adds player photos where available)
   for (const s of [...allScorers, ...allAssists]) {
     const lastName = s.player.name.split(' ').pop()?.toLowerCase() ?? '';
     const fullLower = s.player.name.toLowerCase();
-    const meta = { photo: s.player.photo, teamLogo: s.statistics[0]?.team.logo };
-    if (lastName) playerMeta[lastName] = meta;
-    playerMeta[fullLower] = meta;
+    const meta = { photo: s.player.photo, teamLogo: s.statistics[0]?.team.logo ?? teamFlagMap[s.statistics[0]?.team.name ?? ''] };
+    if (lastName) playerMeta[lastName] = { ...playerMeta[lastName], ...meta };
+    playerMeta[fullLower] = { ...playerMeta[fullLower], ...meta };
   }
   const upcomingMatches = getUpcomingFixtures(allFixtures);
   const finishedMatches = getFinishedFixtures(allFixtures);
@@ -107,27 +118,26 @@ export default async function Page() {
           background: 'var(--navy)',
           zIndex: 100,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ display: 'flex', height: '20px', gap: '3px' }}>
-              <div style={{ width: '6px', background: 'var(--blue)', borderRadius: '1px' }} />
-              <div style={{ width: '6px', background: 'var(--white)', opacity: 0.9, borderRadius: '1px' }} />
-              <div style={{ width: '6px', background: 'var(--red)', borderRadius: '1px' }} />
-            </div>
-            <div>
-              <div style={{
-                fontFamily: 'Cormorant Garamond, serif',
-                fontSize: '0.95rem',
-                fontWeight: 500,
-                letterSpacing: '0.1em',
-                color: 'var(--white)',
-                lineHeight: 1,
-                textTransform: 'uppercase',
-              }}>
-                The Story of Greatness
-              </div>
-              <div style={{ fontSize: '9px', letterSpacing: '0.25em', color: 'var(--gold)', textTransform: 'uppercase', marginTop: '3px' }}>
-                FIFA World Cup 2026
-              </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <img
+              src="/WC26Logo.png"
+              alt="FIFA World Cup 2026"
+              style={{ height: '44px', width: 'auto', objectFit: 'contain', display: 'block' }}
+            />
+            <div style={{
+              width: '1px',
+              height: '28px',
+              background: 'var(--gold-border)',
+            }} />
+            <div style={{
+              fontFamily: 'Cormorant Garamond, serif',
+              fontSize: '0.95rem',
+              fontWeight: 500,
+              letterSpacing: '0.1em',
+              color: 'var(--white)',
+              textTransform: 'uppercase',
+            }}>
+              The Story of Greatness
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>

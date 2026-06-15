@@ -197,6 +197,79 @@ export function buildStorylines(entries: GreatnessEntry[]): Storyline[] {
   }));
 }
 
+// ── Static player → team mapping (for performers not in scorer data) ──────────
+
+export const PLAYER_TEAM_MAP: Record<string, string> = {
+  // France
+  'mbappé': 'France', 'mbappe': 'France', 'dembélé': 'France', 'dembele': 'France',
+  'griezmann': 'France', 'giroud': 'France', 'camavinga': 'France', 'tchouaméni': 'France',
+  'tchouameni': 'France', 'maignan': 'France', 'upamecano': 'France', 'rabiot': 'France',
+  'hernandez': 'France', 'saliba': 'France', 'thuram': 'France', 'olise': 'France',
+  'barcola': 'France', 'kante': 'France', 'kanté': 'France',
+  // Argentina
+  'messi': 'Argentina', 'di maria': 'Argentina', 'álvarez': 'Argentina', 'alvarez': 'Argentina',
+  'de paul': 'Argentina', 'mac allister': 'Argentina', 'martinez': 'Argentina', 'dibu': 'Argentina',
+  'romero': 'Argentina', 'molina': 'Argentina', 'tagliafico': 'Argentina',
+  // England
+  'bellingham': 'England', 'saka': 'England', 'kane': 'England', 'foden': 'England',
+  'walker': 'England', 'trippier': 'England', 'pickford': 'England', 'mainoo': 'England',
+  'palmer': 'England', 'gordon': 'England',
+  // Brazil
+  'vinicius': 'Brazil', 'vinicius jr': 'Brazil', 'rodrygo': 'Brazil', 'endrick': 'Brazil',
+  'paquetá': 'Brazil', 'paqueta': 'Brazil', 'militão': 'Brazil', 'militao': 'Brazil',
+  'marquinhos': 'Brazil', 'alisson': 'Brazil', 'raphinha': 'Brazil',
+  // Spain
+  'yamal': 'Spain', 'pedri': 'Spain', 'nico williams': 'Spain', 'morata': 'Spain',
+  'rodri': 'Spain', 'carvajal': 'Spain', 'laporte': 'Spain', 'ferran': 'Spain',
+  'gavi': 'Spain', 'le normand': 'Spain',
+  // Germany
+  'musiala': 'Germany', 'wirtz': 'Germany', 'rüdiger': 'Germany', 'rudiger': 'Germany',
+  'kimmich': 'Germany', 'havertz': 'Germany', 'undav': 'Germany', 'brown': 'Germany',
+  'gnabry': 'Germany', 'sane': 'Germany', 'müller': 'Germany', 'muller': 'Germany',
+  'neuer': 'Germany', 'ayari': 'Germany',
+  // Portugal
+  'ronaldo': 'Portugal', 'bruno fernandes': 'Portugal', 'leão': 'Portugal', 'leao': 'Portugal',
+  'felix': 'Portugal', 'carvalho': 'Portugal', 'cancelo': 'Portugal', 'bernardo': 'Portugal',
+  // Belgium
+  'lukaku': 'Belgium', 'de bruyne': 'Belgium', 'doku': 'Belgium', 'tielemans': 'Belgium',
+  'carrasco': 'Belgium', 'vertonghen': 'Belgium', 'courtois': 'Belgium', 'witsel': 'Belgium',
+  // Netherlands
+  'van dijk': 'Netherlands', 'gakpo': 'Netherlands', 'de jong': 'Netherlands',
+  'dumfries': 'Netherlands', 'weghorst': 'Netherlands', 'zirkzee': 'Netherlands',
+  'simons': 'Netherlands',
+  // USA
+  'pulisic': 'United States', 'balogun': 'United States', 'reyna': 'United States',
+  'mckennie': 'United States', 'musah': 'United States', 'weah': 'United States',
+  // Canada
+  'davies': 'Canada', 'jonathan david': 'Canada', 'buchanan': 'Canada', 'larin': 'Canada',
+  // Mexico
+  'lozano': 'Mexico', 'alvarez edson': 'Mexico',
+  // Morocco
+  'hakimi': 'Morocco', 'en-nesyri': 'Morocco', 'ziyech': 'Morocco', 'amrabat': 'Morocco',
+  // South Korea
+  'son': 'South Korea', 'hwang': 'South Korea', 'lee': 'South Korea',
+  // Egypt
+  'salah': 'Egypt', 'mo salah': 'Egypt',
+  // Nigeria
+  'osimhen': 'Nigeria',
+  // Poland
+  'lewandowski': 'Poland',
+  // Georgia
+  'kvaratskhelia': 'Georgia', 'kvara': 'Georgia',
+  // Sweden
+  'isak': 'Sweden', 'forsberg': 'Sweden',
+};
+
+// Build team name → logo from fixtures
+export function buildTeamFlagMap(fixtures: ApiFixture[]): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const f of fixtures) {
+    map[f.teams.home.name] = f.teams.home.logo;
+    map[f.teams.away.name] = f.teams.away.logo;
+  }
+  return map;
+}
+
 // ── Derived helpers ───────────────────────────────────────────────────────────
 
 const LIVE_STATUSES = new Set(['1H', '2H', 'HT', 'ET', 'BT', 'P', 'INT', 'LIVE', 'SUSP']);
