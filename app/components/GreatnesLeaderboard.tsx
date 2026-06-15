@@ -31,15 +31,15 @@ function LeaderboardRow({ entry, highlight }: { entry: GreatnessEntry; highlight
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: '52px 1fr auto',
+      gridTemplateColumns: '44px 1fr auto',
       alignItems: 'start',
-      gap: '20px',
-      padding: '20px 24px',
+      gap: '16px',
+      padding: '16px 20px',
       background: highlight ? 'var(--navy-2)' : 'transparent',
       border: highlight ? '1px solid var(--gold-border)' : '1px solid transparent',
       borderRadius: '2px',
     }}>
-      <span className="rank" style={{ opacity: highlight ? 0.7 : 0.3, paddingTop: '4px' }}>
+      <span className="rank" style={{ opacity: highlight ? 0.7 : 0.3, paddingTop: '2px', fontSize: '32px' }}>
         {String(entry.rank).padStart(2, '0')}
       </span>
 

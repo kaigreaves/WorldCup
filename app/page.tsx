@@ -9,7 +9,7 @@ import {
 import GreatnessLeaderboard from './components/GreatnesLeaderboard';
 import Matches from './components/Matches';
 import PlayerSpotlight from './components/PlayerSpotlight';
-import { RedditDataLoader, PerformersSection, FanVoiceSection } from './components/RedditShell';
+import { RedditDataLoader, RedditLoadingBanner, PerformersSection, FanVoiceSection } from './components/RedditShell';
 
 export default async function Page() {
   const [fixtures, scorers, assists] = await Promise.all([
@@ -45,7 +45,7 @@ export default async function Page() {
       <header
         style={{
           borderBottom: '1px solid var(--gold-border)',
-          padding: '0 48px',
+          padding: '0 clamp(20px, 4vw, 48px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -89,7 +89,7 @@ export default async function Page() {
       {/* Hero */}
       <div
         style={{
-          padding: '80px 48px 64px',
+          padding: '80px clamp(20px, 4vw, 48px) 64px',
           borderBottom: '1px solid var(--gold-border)',
           background: 'linear-gradient(180deg, var(--navy-2) 0%, var(--navy) 100%)',
         }}
@@ -144,7 +144,7 @@ export default async function Page() {
       {/* Nav */}
       <nav
         style={{
-          padding: '0 48px',
+          padding: '0 clamp(20px, 4vw, 48px)',
           borderBottom: '1px solid var(--gold-border)',
           display: 'flex',
           gap: '32px',
@@ -177,11 +177,12 @@ export default async function Page() {
       </nav>
 
       {/* Main content */}
-      <main style={{ padding: '72px 48px', maxWidth: '1400px', margin: '0 auto' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '96px' }}>
+      <main style={{ padding: '72px clamp(20px, 4vw, 48px)', maxWidth: '1400px', margin: '0 auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '72px' }}>
 
           {/* Client-side Reddit loader — fires once, hydrates all comment sections */}
           <RedditDataLoader fixtures={fixturesForReddit} />
+          <RedditLoadingBanner />
 
           <div id="leaderboard">
             <GreatnessLeaderboard entries={greatnessEntries} />
@@ -210,7 +211,7 @@ export default async function Page() {
       <footer
         style={{
           borderTop: '1px solid var(--gold-border)',
-          padding: '32px 48px',
+          padding: '32px clamp(20px, 4vw, 48px)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -229,7 +230,7 @@ export default async function Page() {
             The Story of Greatness
           </p>
           <p style={{ fontSize: '11px', color: 'var(--muted)', margin: '4px 0 0 0' }}>
-            Data via football-data.org · Updated live · FIFA World Cup 2026
+            Data via api-sports.io & Reddit · Updated live · FIFA World Cup 2026
           </p>
         </div>
         <div style={{ display: 'flex', gap: '4px', height: '28px' }}>

@@ -64,7 +64,7 @@ export function MatchFanComments({
   const [comments, setComments] = useState<RedditComment[] | null>(null);
 
   useEffect(() => {
-    const cached = sessionStorage.getItem('reddit_data_v4');
+    const cached = sessionStorage.getItem('reddit_data_v6');
     if (cached) {
       const data: RedditClientData = JSON.parse(cached);
       const key = matchKey(homeTeam, awayTeam);
@@ -118,17 +118,27 @@ export function PlayerFanComment({
   const [comment, setComment] = useState<RedditComment | null | undefined>(undefined);
 
   const findComment = (data: RedditClientData) => {
-    // Try playerComments first (tracked players with detected mentions)
-    const lastName = playerName.toLowerCase().split(' ').pop() ?? '';
+    const nameLower = playerName.toLowerCase();
+    // last name, or for single-word names the full name
+    const parts = playerName.split(' ');
+    const lastName = (parts.pop() ?? '').toLowerCase();
+    const firstName = (parts[0] ?? '').toLowerCase();
+
+    // 1. Try pre-computed tracked playerComments
     const key = Object.keys(data.playerComments).find(k =>
       k.toLowerCase().includes(lastName) ||
-      playerName.toLowerCase().includes(k.toLowerCase())
+      nameLower.includes(k.toLowerCase())
     );
     if (key) { setComment(data.playerComments[key]); return; }
 
-    // Fallback: search fan voice comments for any mention of the player's last name
-    if (lastName.length >= 4) {
-      const found = data.fanVoiceComments.find(c => c.body.toLowerCase().includes(lastName));
+    // 2. Search allComments for any mention of the player's last name (≥4 chars)
+    const searchTerms = [lastName, firstName].filter(t => t.length >= 4);
+    if (searchTerms.length > 0) {
+      const pool = [...(data.allComments ?? []), ...data.fanVoiceComments];
+      // prefer comments that explicitly mention the name
+      const found = pool
+        .filter(c => searchTerms.some(t => c.body.toLowerCase().includes(t)))
+        .sort((a, b) => b.score - a.score)[0];
       if (found) { setComment(found); return; }
     }
 
@@ -136,7 +146,7 @@ export function PlayerFanComment({
   };
 
   useEffect(() => {
-    const cached = sessionStorage.getItem('reddit_data_v4');
+    const cached = sessionStorage.getItem('reddit_data_v6');
     if (cached) { findComment(JSON.parse(cached)); return; }
   }, [playerName]);
 
@@ -187,7 +197,7 @@ export function PerformersSection() {
   };
 
   useEffect(() => {
-    const cached = sessionStorage.getItem('reddit_data_v4');
+    const cached = sessionStorage.getItem('reddit_data_v6');
     if (cached) { apply(JSON.parse(cached)); return; }
   }, []);
 
@@ -267,7 +277,7 @@ export function FanVoiceSection() {
   const apply = (d: RedditClientData) => setData({ comments: d.fanVoiceComments, threads: d.threads.length, fetchedAt: d.fetchedAt });
 
   useEffect(() => {
-    const cached = sessionStorage.getItem('reddit_data_v4');
+    const cached = sessionStorage.getItem('reddit_data_v6');
     if (cached) { apply(JSON.parse(cached)); return; }
   }, []);
 
@@ -341,17 +351,45 @@ export function FanVoiceSection() {
 
 // ── Data loader — runs once, fires event, caches in sessionStorage ────────────
 
+export function RedditLoadingBanner() {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const cached = sessionStorage.getItem('reddit_data_v6');
+    if (cached) { setReady(true); return; }
+    const handler = () => setReady(true);
+    window.addEventListener('reddit-data-ready', handler);
+    return () => window.removeEventListener('reddit-data-ready', handler);
+  }, []);
+
+  if (ready) return null;
+  return (
+    <div style={{
+      position: 'fixed', bottom: '24px', right: '24px', zIndex: 200,
+      background: 'var(--navy-2)', border: '1px solid var(--gold-border)',
+      borderRadius: '2px', padding: '10px 16px',
+      display: 'flex', alignItems: 'center', gap: '10px',
+    }}>
+      <div style={{
+        width: '6px', height: '6px', borderRadius: '50%',
+        background: 'var(--gold)', animation: 'pulse 1.5s ease-in-out infinite',
+      }} />
+      <span style={{ fontSize: '11px', color: 'var(--muted)', letterSpacing: '0.08em' }}>Loading fan comments…</span>
+    </div>
+  );
+}
+
 export function RedditDataLoader({
   fixtures,
 }: {
   fixtures: Array<{ homeTeam: string; awayTeam: string; isFinished: boolean }>;
 }) {
   useEffect(() => {
-    const cached = sessionStorage.getItem('reddit_data_v4');
-    const cacheTime = sessionStorage.getItem('reddit_data_v4_time');
-    const ONE_HOUR = 60 * 60 * 1000;
+    const cached = sessionStorage.getItem('reddit_data_v6');
+    const cacheTime = sessionStorage.getItem('reddit_data_v6_time');
+    const THIRTY_MIN = 30 * 60 * 1000;
 
-    if (cached && cacheTime && Date.now() - parseInt(cacheTime) < ONE_HOUR) {
+    if (cached && cacheTime && Date.now() - parseInt(cacheTime) < THIRTY_MIN) {
       const data = JSON.parse(cached);
       window.dispatchEvent(new CustomEvent('reddit-data-ready', { detail: data }));
       return;
@@ -362,8 +400,8 @@ export function RedditDataLoader({
       console.log('[Reddit] playerComments keys:', Object.keys(data.playerComments));
       console.log('[Reddit] performers:', data.performers.map(p => p.name));
       console.log('[Reddit] fanVoice count:', data.fanVoiceComments.length);
-      sessionStorage.setItem('reddit_data_v4', JSON.stringify(data));
-      sessionStorage.setItem('reddit_data_v4_time', Date.now().toString());
+      sessionStorage.setItem('reddit_data_v6', JSON.stringify(data));
+      sessionStorage.setItem('reddit_data_v6_time', Date.now().toString());
       window.dispatchEvent(new CustomEvent('reddit-data-ready', { detail: data }));
     });
   }, []);

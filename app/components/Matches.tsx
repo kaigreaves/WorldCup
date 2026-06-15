@@ -87,6 +87,10 @@ function FinishedCard({ fix }: { fix: ApiFixture }) {
   );
 }
 
+function isSameDay(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
 interface Props {
   upcoming: ApiFixture[];
   finished: ApiFixture[];
@@ -94,6 +98,36 @@ interface Props {
 
 export default function Matches({ upcoming, finished }: Props) {
   const grid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '12px' };
+  const now = new Date();
+  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+
+  const todayFinished = finished.filter(f => isSameDay(new Date(f.fixture.date), now));
+  const yesterdayFinished = finished.filter(f => isSameDay(new Date(f.fixture.date), yesterday));
+  const olderFinished = finished.filter(f => {
+    const d = new Date(f.fixture.date);
+    return !isSameDay(d, now) && !isSameDay(d, yesterday);
+  });
+
+  const groups = [
+    { label: "Today's matches", color: 'var(--gold)', items: todayFinished, upcoming: false },
+    { label: 'Up next', color: 'var(--gold)', items: upcoming, upcoming: true },
+    { label: 'Yesterday', color: 'var(--muted)', items: yesterdayFinished, upcoming: false },
+    { label: 'Earlier results', color: 'var(--muted)', items: olderFinished, upcoming: false },
+  ].filter(g => g.items.length > 0);
+
+  if (groups.length === 0) {
+    return (
+      <section>
+        <div className="mb-8">
+          <p className="label mb-3">The Stage</p>
+          <h2 style={{ fontSize: '2.5rem', color: 'var(--white)' }}>Matches</h2>
+          <div className="gold-line mt-4" />
+        </div>
+        <p style={{ color: 'var(--muted)', fontStyle: 'italic' }}>Match data will appear as the tournament gets underway.</p>
+      </section>
+    );
+  }
+
   return (
     <section>
       <div className="mb-8">
@@ -101,21 +135,19 @@ export default function Matches({ upcoming, finished }: Props) {
         <h2 style={{ fontSize: '2.5rem', color: 'var(--white)' }}>Matches</h2>
         <div className="gold-line mt-4" />
       </div>
-      {upcoming.length > 0 && (
-        <div style={{ marginBottom: '48px' }}>
-          <p style={{ fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: '20px' }}>Upcoming fixtures</p>
-          <div style={grid}>{upcoming.map(f => <UpcomingCard key={f.fixture.id} fix={f} />)}</div>
-        </div>
-      )}
-      {finished.length > 0 && (
-        <div>
-          <p style={{ fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: '20px' }}>Results</p>
-          <div style={grid}>{finished.map(f => <FinishedCard key={f.fixture.id} fix={f} />)}</div>
-        </div>
-      )}
-      {upcoming.length === 0 && finished.length === 0 && (
-        <p style={{ color: 'var(--muted)', fontStyle: 'italic' }}>Match data will appear as the tournament gets underway.</p>
-      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
+        {groups.map(g => (
+          <div key={g.label}>
+            <p style={{ fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: g.color, marginBottom: '20px' }}>{g.label}</p>
+            <div style={grid}>
+              {g.items.map(f => g.upcoming
+                ? <UpcomingCard key={f.fixture.id} fix={f} />
+                : <FinishedCard key={f.fixture.id} fix={f} />
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }

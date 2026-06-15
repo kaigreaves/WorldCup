@@ -65,7 +65,30 @@ const TRACKED_PLAYERS: { name: string; aliases: string[] }[] = [
   { name: 'Salah', aliases: ['salah', 'mo salah'] },
   { name: 'Son', aliases: ['son heung-min', 'son heung'] },
   { name: 'Lewandowski', aliases: ['lewandowski', 'lewy'] },
-  { name: 'Hwang', aliases: ['hwang in-beom'] },
+  { name: 'Hwang', aliases: ['hwang in-beom', 'hwang'] },
+  { name: 'Havertz', aliases: ['havertz', 'kai havertz'] },
+  { name: 'Musiala', aliases: ['musiala', 'jamal musiala'] },
+  { name: 'Wirtz', aliases: ['wirtz', 'florian wirtz'] },
+  { name: 'Undav', aliases: ['undav', 'deniz undav'] },
+  { name: 'Ayari', aliases: ['ayari', 'yasin ayari'] },
+  { name: 'Jonathan David', aliases: ['jonathan david', 'j. david', 'jon david'] },
+  { name: 'Balogun', aliases: ['balogun', 'folarin balogun'] },
+  { name: 'Weah', aliases: ['weah', 'timothy weah'] },
+  { name: 'Doku', aliases: ['doku', 'jeremy doku'] },
+  { name: 'De Bruyne', aliases: ['de bruyne', 'kdb', 'kevin de bruyne'] },
+  { name: 'Lukaku', aliases: ['lukaku', 'romelu'] },
+  { name: 'Kvaratskhelia', aliases: ['kvaratskhelia', 'kvara'] },
+  { name: 'Dumfries', aliases: ['dumfries'] },
+  { name: 'Weghorst', aliases: ['weghorst'] },
+  { name: 'Zirkzee', aliases: ['zirkzee'] },
+  { name: 'Simons', aliases: ['simons', 'xavi simons'] },
+  { name: 'Veiga', aliases: ['veiga', 'raphael veiga'] },
+  { name: 'Benzema', aliases: ['benzema', 'karim'] },
+  { name: 'Griezmann', aliases: ['griezmann', 'antoine'] },
+  { name: 'Giroud', aliases: ['giroud', 'olivier giroud'] },
+  { name: 'Lozano', aliases: ['lozano', 'chucky lozano'] },
+  { name: 'Alvarez', aliases: ['alvarez', 'edson alvarez'] },
+  { name: 'Brown', aliases: ['noah brown'] },
 ];
 
 export interface RedditComment {
@@ -99,6 +122,7 @@ export interface RedditClientData {
   playerComments: Record<string, RedditComment>;
   performers: PerformerEntry[];
   fanVoiceComments: RedditComment[];
+  allComments: RedditComment[];   // top 150 across all threads — for name-search fallback
   fetchedAt: string;
 }
 
@@ -146,7 +170,8 @@ interface ArcticComment {
 
 async function arcticGet<T>(url: string): Promise<T | null> {
   try {
-    const res = await fetch(`/api/reddit?url=${encodeURIComponent(url)}`);
+    // Arctic Shift allows CORS — fetch directly from the browser, no proxy needed
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -186,6 +211,25 @@ const TEAM_MAP: Record<string, string> = {
   "Côte d'Ivoire": 'Ivory Coast',
   'IR Iran': 'Iran',
 };
+
+// All aliases a team might appear as in thread titles
+const TEAM_ALIASES: Record<string, string[]> = {
+  'United States': ['usa', 'usmnt', 'united states', 'us men'],
+  "Côte d'Ivoire": ["côte d'ivoire", "cote d'ivoire", 'ivory coast'],
+  'Korea Republic': ['south korea', 'korea republic', 'korea'],
+  'Bosnia & Herzegovina': ['bosnia', 'bosnia & herzegovina'],
+  'IR Iran': ['iran', 'ir iran'],
+  'Netherlands': ['netherlands', 'holland'],
+  'Saudi Arabia': ['saudi arabia', 'saudi'],
+  'New Zealand': ['new zealand', 'new zealand all whites'],
+};
+
+function teamInTitle(teamName: string, title: string): boolean {
+  const t = title.toLowerCase();
+  const aliases = TEAM_ALIASES[teamName] ?? [(TEAM_MAP[teamName] ?? teamName).toLowerCase()];
+  const all = [...new Set([...aliases, teamName.toLowerCase()])];
+  return all.some(a => t.includes(a));
+}
 
 export function matchKey(home: string, away: string): string {
   const norm = (n: string) => (TEAM_MAP[n] ?? n).toLowerCase();
@@ -253,21 +297,27 @@ export async function fetchRedditData(
   const matchComments: Record<string, RedditComment[]> = {};
   for (const fix of fixtures) {
     const key = matchKey(fix.homeTeam, fix.awayTeam);
-    const homeNorm = normTeam(fix.homeTeam);
-    const awayNorm = normTeam(fix.awayTeam);
-    const label = fix.isFinished ? 'post match' : 'match thread';
 
+    // Find threads specifically about this match
     const relThreads = topThreads.filter(t => {
-      const title = t.title.toLowerCase();
-      return (title.includes(homeNorm) || title.includes(fix.homeTeam.toLowerCase())) &&
-             (title.includes(awayNorm) || title.includes(fix.awayTeam.toLowerCase())) &&
-             (fix.isFinished ? true : !title.includes('post match'));
+      const title = t.title;
+      const matchesTeams = teamInTitle(fix.homeTeam, title) && teamInTitle(fix.awayTeam, title);
+      const notPostMatch = fix.isFinished ? true : !title.toLowerCase().includes('post match') && !title.toLowerCase().includes('post-match');
+      return matchesTeams && notPostMatch;
     });
 
-    if (relThreads.length === 0) continue;
-
-    const comments: RedditComment[] = [];
-    for (const t of relThreads) comments.push(...(commentsByThread.get(t.id) ?? []));
+    let comments: RedditComment[] = [];
+    if (relThreads.length > 0) {
+      for (const t of relThreads) comments.push(...(commentsByThread.get(t.id) ?? []));
+    } else {
+      // Fallback: pick any comment from all threads that mentions either team name
+      const homeAliases = [fix.homeTeam.toLowerCase(), (TEAM_MAP[fix.homeTeam] ?? fix.homeTeam).toLowerCase()];
+      const awayAliases = [fix.awayTeam.toLowerCase(), (TEAM_MAP[fix.awayTeam] ?? fix.awayTeam).toLowerCase()];
+      comments = allComments.filter(c => {
+        const b = c.body.toLowerCase();
+        return homeAliases.some(a => b.includes(a)) || awayAliases.some(a => b.includes(a));
+      });
+    }
 
     const seen2 = new Set<string>();
     const best: RedditComment[] = [];
@@ -294,7 +344,7 @@ export async function fetchRedditData(
 
   const recentMentions = detectMentions(recentComments.filter(c => isSubstantive(c.body)));
   const performers: PerformerEntry[] = Array.from(recentMentions.entries())
-    .filter(([, d]) => d.topComment.score >= 1)
+    .filter(([, d]) => d.count >= 2)
     .map(([name, d]) => ({
       name,
       mentionCount: d.count,
@@ -322,6 +372,7 @@ export async function fetchRedditData(
     playerComments,
     performers,
     fanVoiceComments,
+    allComments: allComments.filter(c => isSubstantive(c.body)).slice(0, 150),
     fetchedAt: new Date().toISOString(),
   };
 }
