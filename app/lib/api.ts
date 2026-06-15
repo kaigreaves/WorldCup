@@ -79,6 +79,14 @@ export async function getTopAssists(): Promise<ApiScorer[] | null> {
 
 // ── Derived helpers ───────────────────────────────────────────────────────────
 
+const LIVE_STATUSES = new Set(['1H', '2H', 'HT', 'ET', 'BT', 'P', 'INT', 'LIVE', 'SUSP']);
+
+export function getLiveFixtures(fixtures: ApiFixture[]): ApiFixture[] {
+  return fixtures
+    .filter(f => LIVE_STATUSES.has(f.fixture.status.short))
+    .sort((a, b) => new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime());
+}
+
 export function getFinishedFixtures(fixtures: ApiFixture[], limit = 12): ApiFixture[] {
   return fixtures
     .filter(f => f.fixture.status.short === 'FT' || f.fixture.status.short === 'AET' || f.fixture.status.short === 'PEN')

@@ -5,6 +5,7 @@ import {
   computeGreatness,
   getUpcomingFixtures,
   getFinishedFixtures,
+  getLiveFixtures,
 } from './lib/api';
 import GreatnessLeaderboard from './components/GreatnesLeaderboard';
 import Matches from './components/Matches';
@@ -25,6 +26,7 @@ export default async function Page() {
   const greatnessEntries = computeGreatness(allScorers, allAssists);
   const upcomingMatches = getUpcomingFixtures(allFixtures);
   const finishedMatches = getFinishedFixtures(allFixtures);
+  const liveMatches = getLiveFixtures(allFixtures);
 
   // Fixture list passed to client-side Reddit loader
   const fixturesForReddit = [
@@ -189,7 +191,7 @@ export default async function Page() {
           </div>
 
           <div id="matches">
-            <Matches upcoming={upcomingMatches} finished={finishedMatches} />
+            <Matches upcoming={upcomingMatches} finished={finishedMatches} live={liveMatches} />
           </div>
 
           <div id="performers">

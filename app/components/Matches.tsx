@@ -1,5 +1,19 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import type { ApiFixture } from '../lib/api';
 import { MatchFanComments } from './RedditShell';
+
+function LiveRefresher({ hasLive }: { hasLive: boolean }) {
+  const router = useRouter();
+  useEffect(() => {
+    if (!hasLive) return;
+    const id = setInterval(() => router.refresh(), 5 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [hasLive, router]);
+  return null;
+}
 
 function formatDate(utcDate: string) {
   const d = new Date(utcDate);
@@ -16,6 +30,41 @@ function TeamBadge({ team, dim }: { team: ApiFixture['teams']['home']; dim?: boo
       <span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.05rem', color: 'var(--white)', whiteSpace: 'nowrap' }}>
         {team.name}
       </span>
+    </div>
+  );
+}
+
+function LiveCard({ fix }: { fix: ApiFixture }) {
+  const home = fix.goals.home ?? 0;
+  const away = fix.goals.away ?? 0;
+  const elapsed = fix.fixture.status.elapsed;
+  const statusLabel = fix.fixture.status.short === 'HT' ? 'Half Time' : elapsed ? `${elapsed}'` : fix.fixture.status.short;
+  return (
+    <div className="card" style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '20px', borderColor: 'rgba(237,41,57,0.4)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <p className="label" style={{ marginBottom: '4px' }}>{fix.league.round}</p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--red)', animation: 'pulse 1.5s infinite' }} />
+          <span style={{ fontSize: '12px', color: 'var(--red)', fontWeight: 600, letterSpacing: '0.1em' }}>{statusLabel}</span>
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <TeamBadge team={fix.teams.home} />
+        <div style={{ textAlign: 'center', minWidth: '80px', flexShrink: 0 }}>
+          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '2.5rem', fontWeight: 300, color: 'var(--white)', lineHeight: 1, letterSpacing: '0.05em' }}>
+            {home} <span style={{ color: 'var(--red)', opacity: 0.7 }}>—</span> {away}
+          </div>
+        </div>
+        <TeamBadge team={fix.teams.away} />
+      </div>
+      <MatchFanComments
+        homeTeam={fix.teams.home.name}
+        awayTeam={fix.teams.away.name}
+        label="Fan reaction"
+        isFinished={false}
+      />
     </div>
   );
 }
@@ -94,9 +143,10 @@ function isSameDay(a: Date, b: Date) {
 interface Props {
   upcoming: ApiFixture[];
   finished: ApiFixture[];
+  live: ApiFixture[];
 }
 
-export default function Matches({ upcoming, finished }: Props) {
+export default function Matches({ upcoming, finished, live }: Props) {
   const grid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '12px' };
   const now = new Date();
   const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
@@ -109,11 +159,14 @@ export default function Matches({ upcoming, finished }: Props) {
   });
 
   const groups = [
-    { label: "Today's matches", color: 'var(--gold)', items: todayFinished, upcoming: false },
-    { label: 'Up next', color: 'var(--gold)', items: upcoming, upcoming: true },
-    { label: 'Yesterday', color: 'var(--muted)', items: yesterdayFinished, upcoming: false },
-    { label: 'Earlier results', color: 'var(--muted)', items: olderFinished, upcoming: false },
+    { label: 'Live now', color: 'var(--red)', items: live, type: 'live' as const },
+    { label: "Today's results", color: 'var(--gold)', items: todayFinished, type: 'finished' as const },
+    { label: 'Up next', color: 'var(--gold)', items: upcoming, type: 'upcoming' as const },
+    { label: 'Yesterday', color: 'var(--muted)', items: yesterdayFinished, type: 'finished' as const },
+    { label: 'Earlier results', color: 'var(--muted)', items: olderFinished, type: 'finished' as const },
   ].filter(g => g.items.length > 0);
+
+  const hasLive = live.length > 0;
 
   if (groups.length === 0) {
     return (
@@ -130,6 +183,7 @@ export default function Matches({ upcoming, finished }: Props) {
 
   return (
     <section>
+      <LiveRefresher hasLive={hasLive} />
       <div className="mb-8">
         <p className="label mb-3">The Stage</p>
         <h2 style={{ fontSize: '2.5rem', color: 'var(--white)' }}>Matches</h2>
@@ -140,9 +194,10 @@ export default function Matches({ upcoming, finished }: Props) {
           <div key={g.label}>
             <p style={{ fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: g.color, marginBottom: '20px' }}>{g.label}</p>
             <div style={grid}>
-              {g.items.map(f => g.upcoming
-                ? <UpcomingCard key={f.fixture.id} fix={f} />
-                : <FinishedCard key={f.fixture.id} fix={f} />
+              {g.items.map(f =>
+                g.type === 'live' ? <LiveCard key={f.fixture.id} fix={f} /> :
+                g.type === 'upcoming' ? <UpcomingCard key={f.fixture.id} fix={f} /> :
+                <FinishedCard key={f.fixture.id} fix={f} />
               )}
             </div>
           </div>
