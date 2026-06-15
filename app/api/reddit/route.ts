@@ -29,6 +29,18 @@ export async function GET(req: NextRequest) {
   const rawUrl = req.nextUrl.searchParams.get('url');
   if (!rawUrl) return NextResponse.json({ error: 'Missing url' }, { status: 400 });
 
+  // Allow Arctic Shift / Pullpush requests directly (no auth needed)
+  if (rawUrl.startsWith('https://arctic-shift.photon-reddit.com/') || rawUrl.startsWith('https://api.pullpush.io/')) {
+    try {
+      const res = await fetch(rawUrl, { headers: { 'Accept': 'application/json', 'User-Agent': USER_AGENT }, next: { revalidate: 0 } });
+      if (!res.ok) return NextResponse.json({ error: res.status }, { status: res.status });
+      const data = await res.json();
+      return NextResponse.json(data, { headers: { 'Cache-Control': 'no-store' } });
+    } catch (e) {
+      return NextResponse.json({ error: String(e) }, { status: 500 });
+    }
+  }
+
   const token = await getToken();
   // Rewrite www.reddit.com → oauth.reddit.com when using token
   const url = token ? rawUrl.replace('https://www.reddit.com/', 'https://oauth.reddit.com/') : rawUrl;

@@ -130,7 +130,21 @@ function isSubstantive(body: string): boolean {
 
 // ── Fetch helpers ─────────────────────────────────────────────────────────────
 
-async function redditGet<T>(url: string): Promise<T | null> {
+// Use Arctic Shift — a real-time Reddit archive API, no auth required, has live WC2026 data.
+// Reddit's own API requires OAuth since 2023 and returns 403 from servers without credentials.
+
+const ARCTIC = 'https://arctic-shift.photon-reddit.com/api';
+
+interface ArcticPost {
+  id: string; title: string; subreddit: string; score: number;
+  num_comments: number; created_utc: number; permalink: string;
+}
+interface ArcticComment {
+  id: string; body: string; score: number; author: string;
+  link_id: string; created_utc: number;
+}
+
+async function arcticGet<T>(url: string): Promise<T | null> {
   try {
     const res = await fetch(`/api/reddit?url=${encodeURIComponent(url)}`);
     if (!res.ok) return null;
@@ -141,30 +155,24 @@ async function redditGet<T>(url: string): Promise<T | null> {
 }
 
 async function searchPosts(query: string, subreddit: string): Promise<RedditPost[]> {
-  const url = `https://www.reddit.com/r/${subreddit}/search.json?q=${encodeURIComponent(query)}&sort=new&restrict_sr=on&t=week&limit=8`;
-  const data = await redditGet<{ data: { children: { data: RedditPost & { permalink: string } }[] } }>(url);
-  return (data?.data?.children ?? []).map(c => ({ ...c.data, subreddit }));
+  const url = `${ARCTIC}/posts/search?subreddit=${subreddit}&title=${encodeURIComponent(query)}&limit=10`;
+  const data = await arcticGet<{ data: ArcticPost[] }>(url);
+  return (data?.data ?? []).map(p => ({
+    id: p.id,
+    title: p.title,
+    subreddit: p.subreddit ?? subreddit,
+    score: p.score ?? 0,
+    num_comments: p.num_comments ?? 0,
+    created_utc: p.created_utc,
+    permalink: p.permalink ?? '',
+  }));
 }
 
-// Fallback: browse /new directly and filter for match threads locally
-async function browseNewPosts(subreddit: string): Promise<RedditPost[]> {
-  const url = `https://www.reddit.com/r/${subreddit}/new.json?limit=100`;
-  const data = await redditGet<{ data: { children: { data: RedditPost }[] } }>(url);
-  if (!data?.data?.children) return [];
-  return data.data.children
-    .map(c => ({ ...c.data, subreddit }))
-    .filter(p => {
-      const t = p.title.toLowerCase();
-      return t.includes('match thread') || t.includes('post match') || t.includes('post-match');
-    });
-}
-
-async function fetchComments(postId: string, subreddit: string, threadTitle: string): Promise<RedditComment[]> {
-  const url = `https://www.reddit.com/r/${subreddit}/comments/${postId}.json?sort=top&limit=100&depth=1`;
-  const data = await redditGet<[unknown, { data: { children: { data: RedditComment & { body: string; score: number; author: string } }[] } }]>(url);
-  if (!data?.[1]?.data?.children) return [];
-  return data[1].data.children
-    .map(c => ({ ...c.data, thread_title: threadTitle }))
+async function fetchComments(postId: string, _subreddit: string, threadTitle: string): Promise<RedditComment[]> {
+  const url = `${ARCTIC}/comments/search?link_id=t3_${postId}&limit=100`;
+  const data = await arcticGet<{ data: ArcticComment[] }>(url);
+  return (data?.data ?? [])
+    .map(c => ({ id: c.id, body: c.body, score: c.score ?? 0, author: c.author, thread_title: threadTitle }))
     .filter(c => isAcceptable(c.body))
     .sort((a, b) => b.score - a.score);
 }
@@ -219,26 +227,17 @@ export async function fetchRedditData(
   const searches = [
     { q: 'Match Thread', sub: 'worldcup' },
     { q: 'Post Match Thread', sub: 'worldcup' },
-    { q: 'Match Thread World Cup 2026', sub: 'soccer' },
-    { q: 'Post Match Thread World Cup 2026', sub: 'soccer' },
+    { q: 'Match Thread', sub: 'soccer' },
+    { q: 'Post Match Thread', sub: 'soccer' },
   ];
 
   await Promise.all(searches.map(async ({ q, sub }) => {
     const posts = await searchPosts(q, sub);
+    console.log(`[Reddit] ${sub} "${q}" → ${posts.length} posts`);
     for (const p of posts) {
       if (!seen.has(p.id)) { seen.add(p.id); threads.push(p); }
     }
   }));
-
-  // Fallback: if search returned nothing (e.g. rate limited), browse /new directly
-  if (threads.length === 0) {
-    await Promise.all(['soccer', 'worldcup'].map(async sub => {
-      const posts = await browseNewPosts(sub);
-      for (const p of posts) {
-        if (!seen.has(p.id)) { seen.add(p.id); threads.push(p); }
-      }
-    }));
-  }
 
   threads.sort((a, b) => b.created_utc - a.created_utc);
   const topThreads = threads.slice(0, 10);
@@ -272,7 +271,7 @@ export async function fetchRedditData(
 
     const seen2 = new Set<string>();
     const best: RedditComment[] = [];
-    for (const c of comments.filter(c => isSubstantive(c.body) && c.score >= 1)) {
+    for (const c of comments.filter(c => isSubstantive(c.body) && c.score >= 0)) {
       if (best.length >= 3) break;
       if (!seen2.has(c.author)) { seen2.add(c.author); best.push(c); }
     }
@@ -307,7 +306,7 @@ export async function fetchRedditData(
 
   // 6. Fan voice — top varied comments
   const fanVoiceComments = allComments
-    .filter(c => isSubstantive(c.body) && c.score >= 5 && c.body.length <= 600)
+    .filter(c => isSubstantive(c.body) && c.score >= 0 && c.body.length <= 600)
     .sort((a, b) => b.score - a.score)
     .reduce((acc: RedditComment[], c) => {
       const authors = new Set(acc.map(x => x.author));
