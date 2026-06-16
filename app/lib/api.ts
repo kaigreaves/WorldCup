@@ -1,13 +1,13 @@
 const BASE = 'https://v3.football.api-sports.io';
-const KEY = '8dcac7731565e7af932c170119c7898d';
+const KEY = process.env.API_SPORTS_KEY ?? '';
 const LEAGUE = 1;
 const SEASON = 2026;
 
 const headers = { 'x-apisports-key': KEY };
 
-async function apiFetch<T>(path: string): Promise<T | null> {
+async function apiFetch<T>(path: string, revalidate = 300): Promise<T | null> {
   try {
-    const res = await fetch(`${BASE}${path}`, { headers, cache: 'no-store' });
+    const res = await fetch(`${BASE}${path}`, { headers, next: { revalidate } });
     if (!res.ok) return null;
     const json = await res.json() as { response: T };
     return json.response;
