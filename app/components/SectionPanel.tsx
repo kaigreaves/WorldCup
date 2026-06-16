@@ -6,8 +6,11 @@ const TABS = ['Story', 'Matches', 'Performers', 'Fan Voice', 'Spotlight'];
 
 export default function SectionPanel({ children }: { children: React.ReactNode }) {
   const [active, setActive] = useState(0);
-  // Children may arrive as a nested array — flatten to a guaranteed flat list
   const panels = Children.toArray(children);
+
+  function scrollToRankings() {
+    document.getElementById('mobile-rankings')?.scrollIntoView({ behavior: 'smooth' });
+  }
 
   return (
     <>
@@ -16,7 +19,7 @@ export default function SectionPanel({ children }: { children: React.ReactNode }
         {panels[active]}
       </div>
 
-      {/* Fixed bottom bar */}
+      {/* Fixed bottom nav */}
       <nav style={{
         position: 'fixed',
         bottom: 0,
@@ -28,6 +31,28 @@ export default function SectionPanel({ children }: { children: React.ReactNode }
         display: 'flex',
         zIndex: 300,
       }}>
+        {/* Rankings shortcut — shown on mobile via CSS, scrolls to leaderboard */}
+        <button
+          onClick={scrollToRankings}
+          className="rankings-tab"
+          style={{
+            flex: 1,
+            background: 'none',
+            border: 'none',
+            borderTop: '2px solid var(--gold)',
+            cursor: 'pointer',
+            fontSize: '9px',
+            letterSpacing: '0.15em',
+            textTransform: 'uppercase',
+            color: 'var(--gold)',
+            fontFamily: 'Inter, sans-serif',
+            fontWeight: 500,
+            padding: '0 4px',
+          }}
+        >
+          Rankings
+        </button>
+
         {TABS.map((tab, i) => {
           const isActive = active === i;
           return (

@@ -83,6 +83,7 @@ export interface StandingEntry {
   points: number;
   goalsDiff: number;
   group: string;
+  description: string | null;
   all: { played: number; win: number; draw: number; lose: number };
 }
 

@@ -136,12 +136,35 @@ nav a:hover {
   margin-right: 280px;
 }
 
+/* Mobile leaderboard — hidden on desktop, shown on mobile */
+.mobile-leaderboard {
+  display: none;
+}
+
+/* Rankings tab in bottom nav — hidden on desktop, shown on mobile */
+.rankings-tab {
+  display: none;
+}
+
 @media (max-width: 899px) {
   #leaderboard {
     display: none;
   }
   .main-wrapper {
     margin-right: 0;
+  }
+  .mobile-leaderboard {
+    display: block;
+    border-bottom: 1px solid var(--gold-border);
+    background: var(--navy);
+  }
+  .rankings-tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  main {
+    padding-top: 28px !important;
   }
 }
 

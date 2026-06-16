@@ -251,8 +251,13 @@ export default async function Page() {
           </div>
         </div>
 
+        {/* Mobile leaderboard — always visible on phones, hidden on desktop (sidebar handles it) */}
+        <div className="mobile-leaderboard" id="mobile-rankings" style={{ padding: '28px 20px 16px' }}>
+          <GreatnessLeaderboard entries={greatnessEntries} compact />
+        </div>
+
         {/* Main */}
-        <main style={{ padding: '56px clamp(20px, 4vw, 40px)', maxWidth: '900px' }}>
+        <main style={{ padding: '40px clamp(16px, 4vw, 40px) 56px', maxWidth: '900px' }}>
           <RedditDataLoader fixtures={fixturesForReddit} />
 
           <SectionPanel>
