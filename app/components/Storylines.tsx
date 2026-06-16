@@ -1,16 +1,38 @@
 import type { Storyline } from '../lib/api';
 import { PlayerFanComment } from './RedditShell';
 
+function getSectionHeadline(storylines: Storyline[]): string {
+  const top = storylines[0];
+  const second = storylines[1];
+  if (!top) return 'The Story So Far';
+
+  const topShort = top.playerName.split(' ').pop() ?? top.playerName;
+  const secondShort = second?.playerName.split(' ').pop() ?? '';
+
+  // Two players statistically level at the top
+  if (second && top.goals === second.goals && top.assists === second.assists && top.goals >= 2) {
+    return `${topShort} and ${secondShort} Are Running Away With This`;
+  }
+  if (top.goals >= 4) return `${topShort} Is Defining This Tournament`;
+  if (top.goals >= 2 && top.assists >= 1) return `${topShort} Is the Complete Package Right Now`;
+  if (top.goals >= 2) return `${topShort} Is Leading the Golden Boot Race`;
+  if (top.goals >= 1 && top.assists >= 1 && second && second.goals >= 1) {
+    return `${topShort} and ${secondShort} Setting the Early Pace`;
+  }
+  return 'Every Match Changes Everything';
+}
+
 export default function Storylines({ storylines }: { storylines: Storyline[] }) {
   if (storylines.length === 0) return null;
 
   const [hero, ...rest] = storylines;
+  const headline = getSectionHeadline(storylines);
 
   return (
     <section>
       <div className="mb-8">
         <p className="label mb-3">The Narrative</p>
-        <h2 style={{ fontSize: '2.5rem', color: 'var(--white)' }}>The Story So Far</h2>
+        <h2 style={{ fontSize: '2.5rem', color: 'var(--white)' }}>{headline}</h2>
         <div className="gold-line mt-4" />
         <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '10px', fontStyle: 'italic' }}>
           The arcs defining World Cup 2026 — tracked by the fans who are living it
@@ -36,8 +58,6 @@ function HeroCard({ story }: { story: Storyline }) {
       display: 'grid',
       gridTemplateColumns: '200px 1fr',
       gap: 0,
-      borderBottom: '1px solid var(--gold-border)',
-      marginBottom: '0',
       background: 'var(--navy-2)',
       border: '1px solid var(--gold-border)',
       borderRadius: '2px',
@@ -51,23 +71,14 @@ function HeroCard({ story }: { story: Storyline }) {
             src={story.playerPhoto}
             alt={story.playerName}
             style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              objectPosition: 'top center',
-              display: 'block',
-              filter: 'brightness(0.85)',
+              width: '100%', height: '100%', objectFit: 'cover',
+              objectPosition: 'top center', display: 'block', filter: 'brightness(0.85)',
             }}
           />
         ) : (
           <div style={{ width: '100%', height: '100%', background: 'var(--navy-3)' }} />
         )}
-        {/* Gradient overlay */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'linear-gradient(to right, transparent 60%, var(--navy-2) 100%)',
-        }} />
-        {/* Tag label over photo */}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 60%, var(--navy-2) 100%)' }} />
         <div style={{ position: 'absolute', top: '14px', left: '12px' }}>
           <span style={{
             fontSize: '8px', letterSpacing: '0.22em', textTransform: 'uppercase',
@@ -77,7 +88,6 @@ function HeroCard({ story }: { story: Storyline }) {
             {story.tag}
           </span>
         </div>
-        {/* Team logo bottom-left */}
         {story.teamLogo && (
           <div style={{ position: 'absolute', bottom: '12px', left: '12px' }}>
             <img src={story.teamLogo} alt={story.teamName} width={28} height={28} style={{ objectFit: 'contain', opacity: 0.9 }} />
@@ -90,17 +100,11 @@ function HeroCard({ story }: { story: Storyline }) {
         <h3 style={{
           fontFamily: 'Cormorant Garamond, serif',
           fontSize: 'clamp(1.4rem, 2.5vw, 2rem)',
-          fontWeight: 400,
-          lineHeight: 1.25,
-          color: 'var(--white)',
-          margin: '0 0 14px 0',
+          fontWeight: 400, lineHeight: 1.25, color: 'var(--white)', margin: '0 0 14px 0',
         }}>
           {story.headline}
         </h3>
-        <p style={{
-          fontSize: '12px', color: 'var(--muted)', lineHeight: '1.7',
-          margin: '0 0 18px 0', fontStyle: 'italic',
-        }}>
+        <p style={{ fontSize: '12px', color: 'var(--muted)', lineHeight: '1.7', margin: '0 0 18px 0', fontStyle: 'italic' }}>
           {story.context}
         </p>
         <PlayerFanComment playerName={story.playerName} />
@@ -112,34 +116,23 @@ function HeroCard({ story }: { story: Storyline }) {
 function StoryCard({ story }: { story: Storyline }) {
   return (
     <div style={{
-      display: 'grid',
-      gridTemplateColumns: '120px 1fr',
-      gap: 0,
-      borderBottom: '1px solid var(--gold-border)',
-      overflow: 'hidden',
+      display: 'grid', gridTemplateColumns: '120px 1fr', gap: 0,
+      borderBottom: '1px solid var(--gold-border)', overflow: 'hidden',
     }}>
-      {/* Photo */}
       <div style={{ position: 'relative', minHeight: '160px', overflow: 'hidden' }}>
         {story.playerPhoto ? (
           <img
             src={story.playerPhoto}
             alt={story.playerName}
             style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              objectPosition: 'top center',
-              display: 'block',
-              filter: 'brightness(0.8)',
+              width: '100%', height: '100%', objectFit: 'cover',
+              objectPosition: 'top center', display: 'block', filter: 'brightness(0.8)',
             }}
           />
         ) : (
           <div style={{ width: '100%', height: '100%', background: 'var(--navy-3)' }} />
         )}
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'linear-gradient(to right, transparent 50%, var(--navy) 100%)',
-        }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 50%, var(--navy) 100%)' }} />
         <div style={{ position: 'absolute', top: '10px', left: '8px' }}>
           <span style={{
             fontSize: '7px', letterSpacing: '0.2em', textTransform: 'uppercase',
@@ -150,8 +143,6 @@ function StoryCard({ story }: { story: Storyline }) {
           </span>
         </div>
       </div>
-
-      {/* Content */}
       <div style={{ padding: '20px 24px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
           {story.teamLogo && (
@@ -161,10 +152,7 @@ function StoryCard({ story }: { story: Storyline }) {
           <h3 style={{
             fontFamily: 'Cormorant Garamond, serif',
             fontSize: 'clamp(1.05rem, 1.8vw, 1.35rem)',
-            fontWeight: 400,
-            lineHeight: 1.3,
-            color: 'var(--white)',
-            margin: 0,
+            fontWeight: 400, lineHeight: 1.3, color: 'var(--white)', margin: 0,
           }}>
             {story.headline}
           </h3>

@@ -8,7 +8,13 @@ import type { RedditClientData, RedditComment, PerformerEntry } from '../lib/red
 
 function truncate(text: string, max = 280): string {
   if (text.length <= max) return text;
-  return text.slice(0, max).trimEnd() + '…';
+  const cut = text.slice(0, max);
+  // Try to end at a sentence boundary rather than mid-word
+  const lastEnd = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '));
+  if (lastEnd > max * 0.55) return text.slice(0, lastEnd + 1);
+  // Fall back to last word boundary
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > max * 0.7 ? cut.slice(0, lastSpace) : cut).trimEnd() + '…';
 }
 
 function timeAgo(iso: string): string {
@@ -211,19 +217,26 @@ export function PerformersSection({ headless, playerMeta = {} }: { headless?: bo
           {performers.map((p, i) => {
             const buzz = p.mentionCount >= 15 ? 'Dominant' : p.mentionCount >= 8 ? 'High' : 'Growing';
             const buzzColor = buzz === 'Dominant' ? '#4ade80' : buzz === 'High' ? 'var(--gold)' : 'var(--muted)';
-            // Look up flag + photo by last name or full name
             const lastName = p.name.split(' ').pop()?.toLowerCase() ?? '';
             const meta = playerMeta[p.name.toLowerCase()] ?? playerMeta[lastName];
+            const isStar = i === 0;
             return (
               <div key={p.name} style={{
-                background: 'var(--navy-2)', border: '1px solid var(--gold-border)',
+                background: isStar ? 'var(--navy-3)' : 'var(--navy-2)',
+                border: isStar ? '1px solid var(--gold)' : '1px solid var(--gold-border)',
                 borderRadius: '2px', padding: '24px', position: 'relative', overflow: 'hidden',
+                boxShadow: isStar ? '0 0 24px rgba(201,168,76,0.12)' : 'none',
               }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, width: '3px', height: '100%', background: 'var(--gold)', opacity: 0.6 }} />
-                <div style={{ paddingLeft: '12px' }}>
+                {isStar && (
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'linear-gradient(to right, var(--gold), transparent)' }} />
+                )}
+                {!isStar && (
+                  <div style={{ position: 'absolute', top: 0, left: 0, width: '3px', height: '100%', background: 'var(--gold)', opacity: 0.4 }} />
+                )}
+                <div style={{ paddingLeft: isStar ? '0' : '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <p style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--gold)', margin: 0 }}>
-                      {ACCOLADES[i] ?? 'Standout'}
+                    <p style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--gold)', margin: 0, fontWeight: isStar ? 600 : 400 }}>
+                      {isStar ? 'Performer of the Day' : (ACCOLADES[i] ?? 'Standout')}
                     </p>
                     <span style={{ fontSize: '10px', color: buzzColor, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                       {buzz} buzz

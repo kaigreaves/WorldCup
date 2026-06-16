@@ -6,27 +6,45 @@ import type { ApiFixture } from '../lib/api';
 const STORAGE_KEY = 'wcs_last_visit';
 const FINISHED = new Set(['FT', 'AET', 'PEN']);
 
+function describeResult(f: ApiFixture): string {
+  const home = f.teams.home.name;
+  const away = f.teams.away.name;
+  const hg = f.goals.home ?? 0;
+  const ag = f.goals.away ?? 0;
+  const diff = Math.abs(hg - ag);
+
+  if (hg === ag) {
+    return `${home} and ${away} played out a ${hg}–${ag} draw`;
+  }
+
+  const [winner, loser, wg, lg] = hg > ag
+    ? [home, away, hg, ag]
+    : [away, home, ag, hg];
+
+  if (diff >= 3) return `${winner} hammered ${loser} ${wg}–${lg}`;
+  if (diff === 1) return `${winner} edged past ${loser} ${wg}–${lg}`;
+  return `${winner} beat ${loser} ${wg}–${lg}`;
+}
+
 function buildRecap(fixtures: ApiFixture[], since: number): string {
-  const newResults = fixtures.filter(f => {
-    if (!FINISHED.has(f.fixture.status.short)) return false;
-    return new Date(f.fixture.date).getTime() > since;
-  });
+  const newResults = fixtures.filter(f =>
+    FINISHED.has(f.fixture.status.short) &&
+    new Date(f.fixture.date).getTime() > since
+  );
 
   if (newResults.length === 0) return '';
 
-  const parts = newResults.map(f => {
-    const home = f.teams.home.name;
-    const away = f.teams.away.name;
-    const hg = f.goals.home ?? 0;
-    const ag = f.goals.away ?? 0;
-    if (hg > ag) return `${home} beat ${away} ${hg}–${ag}`;
-    if (ag > hg) return `${away} beat ${home} ${ag}–${hg}`;
-    return `${home} drew ${hg}–${ag} with ${away}`;
-  });
+  if (newResults.length === 1) {
+    return `You missed one — ${describeResult(newResults[0])}.`;
+  }
 
-  if (parts.length === 1) return `While you were away: ${parts[0]}.`;
-  const last = parts.pop();
-  return `While you were away: ${parts.join(', ')}, and ${last}.`;
+  if (newResults.length === 2) {
+    return `Two while you were gone: ${describeResult(newResults[0])}, and ${describeResult(newResults[1])}.`;
+  }
+
+  const first = describeResult(newResults[0]);
+  const rest = newResults.length - 1;
+  return `It's been busy — ${first}, plus ${rest} more result${rest > 1 ? 's' : ''} since your last visit.`;
 }
 
 export default function RecapBanner({ fixtures }: { fixtures: ApiFixture[] }) {
@@ -37,7 +55,6 @@ export default function RecapBanner({ fixtures }: { fixtures: ApiFixture[] }) {
     const raw = localStorage.getItem(STORAGE_KEY);
     const since = raw ? parseInt(raw, 10) : 0;
     localStorage.setItem(STORAGE_KEY, String(Date.now()));
-
     if (since > 0) {
       const text = buildRecap(fixtures, since);
       if (text) setRecap(text);
@@ -48,7 +65,7 @@ export default function RecapBanner({ fixtures }: { fixtures: ApiFixture[] }) {
 
   return (
     <div style={{
-      background: 'rgba(212,175,55,0.08)',
+      background: 'rgba(212,175,55,0.07)',
       borderBottom: '1px solid var(--gold-border)',
       padding: '10px clamp(20px, 4vw, 40px)',
       display: 'flex',
@@ -56,20 +73,14 @@ export default function RecapBanner({ fixtures }: { fixtures: ApiFixture[] }) {
       justifyContent: 'space-between',
       gap: '16px',
     }}>
-      <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', margin: 0, lineHeight: 1.5, fontStyle: 'italic' }}>
+      <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.72)', margin: 0, lineHeight: 1.5, fontStyle: 'italic' }}>
         {recap}
       </p>
       <button
         onClick={() => setDismissed(true)}
         style={{
-          flexShrink: 0,
-          background: 'none',
-          border: 'none',
-          color: 'var(--muted)',
-          cursor: 'pointer',
-          fontSize: '14px',
-          padding: '0 4px',
-          lineHeight: 1,
+          flexShrink: 0, background: 'none', border: 'none',
+          color: 'var(--muted)', cursor: 'pointer', fontSize: '14px', padding: '0 4px', lineHeight: 1,
         }}
         aria-label="Dismiss"
       >

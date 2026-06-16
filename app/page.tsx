@@ -7,6 +7,7 @@ import {
   buildStorylines,
   buildSpotlightPlayers,
   buildTeamFlagMap,
+  buildTeamRankMap,
   PLAYER_TEAM_MAP,
   getUpcomingFixtures,
   getFinishedFixtures,
@@ -20,6 +21,7 @@ import PlayerSpotlight from './components/PlayerSpotlight';
 import SectionPanel from './components/SectionPanel';
 import MatchTicker from './components/MatchTicker';
 import RecapBanner from './components/RecapBanner';
+import HeroCTA from './components/HeroCTA';
 import { RedditDataLoader, PerformersSection, FanVoiceSection } from './components/RedditShell';
 
 export default async function Page() {
@@ -40,6 +42,7 @@ export default async function Page() {
 
   // Name → { photo, teamLogo } lookup for client components (Performers)
   const teamFlagMap = buildTeamFlagMap(allFixtures);
+  const teamRanks = buildTeamRankMap(standings);
   const playerMeta: Record<string, { photo?: string; teamLogo?: string }> = {};
 
   // Seed from static player→team map so performers get flags even without scorer data
@@ -107,8 +110,8 @@ export default async function Page() {
         <GroupStandings groups={standings} />
       </aside>
 
-      {/* Main content — padded right to clear the fixed sidebar */}
-      <div style={{ marginRight: '280px' }}>
+      {/* Main content — padded right to clear the fixed sidebar on desktop */}
+      <div className="main-wrapper">
 
         {/* Header */}
         <header style={{
@@ -229,10 +232,11 @@ export default async function Page() {
               <br />
               <em style={{ color: 'var(--gold)', fontWeight: 300 }}>It is the man in the arena.</em>
             </h1>
-            <p style={{ fontSize: '13px', color: 'var(--muted)', maxWidth: '400px', lineHeight: '1.8', margin: 0 }}>
+            <p style={{ fontSize: '13px', color: 'var(--muted)', maxWidth: '400px', lineHeight: '1.8', margin: '0 0 24px 0' }}>
               Every match writes or rewrites a legacy. We track who is delivering when it counts —
               told through the eyes of the fans watching it happen.
             </p>
+            <HeroCTA />
           </div>
         </div>
 
@@ -254,8 +258,8 @@ export default async function Page() {
           <SectionPanel>
             {[
               <Storylines key="story" storylines={storylines} />,
-              <Matches key="matches" upcoming={upcomingMatches} finished={finishedMatches} live={liveMatches} />,
-              <PerformersSection key="performers" headless playerMeta={playerMeta} />,
+              <Matches key="matches" upcoming={upcomingMatches} finished={finishedMatches} live={liveMatches} teamRanks={teamRanks} />,
+              <div key="performers" id="performers"><PerformersSection headless playerMeta={playerMeta} /></div>,
               <FanVoiceSection key="fanvoice" headless />,
               <PlayerSpotlight
                 key="spotlight"

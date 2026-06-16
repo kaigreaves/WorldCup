@@ -99,10 +99,20 @@ function UpcomingCard({ fix }: { fix: ApiFixture }) {
   );
 }
 
-function FinishedCard({ fix }: { fix: ApiFixture }) {
+function FinishedCard({ fix, teamRanks = {} }: { fix: ApiFixture; teamRanks?: Record<string, number> }) {
   const { date } = formatDate(fix.fixture.date);
   const home = fix.goals.home ?? 0;
   const away = fix.goals.away ?? 0;
+
+  // Upset: the team that won has a worse group rank than the team that lost
+  const homeRank = teamRanks[fix.teams.home.name.toLowerCase()] ?? 0;
+  const awayRank = teamRanks[fix.teams.away.name.toLowerCase()] ?? 0;
+  const homeWon = fix.teams.home.winner === true;
+  const awayWon = fix.teams.away.winner === true;
+  const isUpset = homeRank > 0 && awayRank > 0 && (
+    (homeWon && homeRank > awayRank) || (awayWon && awayRank > homeRank)
+  );
+
   return (
     <div className="card" style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -110,9 +120,16 @@ function FinishedCard({ fix }: { fix: ApiFixture }) {
           <p className="label" style={{ marginBottom: '4px' }}>{fix.league.round}</p>
           <p style={{ fontSize: '12px', color: 'var(--muted)' }}>{date}</p>
         </div>
-        <span style={{ fontSize: '10px', letterSpacing: '0.15em', color: 'var(--muted)', textTransform: 'uppercase', paddingTop: '2px' }}>
-          {fix.fixture.status.short}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', paddingTop: '2px' }}>
+          {isUpset && (
+            <span style={{ fontSize: '9px', letterSpacing: '0.15em', color: 'var(--red)', textTransform: 'uppercase', border: '1px solid rgba(237,41,57,0.35)', padding: '2px 6px', borderRadius: '1px' }}>
+              Upset
+            </span>
+          )}
+          <span style={{ fontSize: '10px', letterSpacing: '0.15em', color: 'var(--muted)', textTransform: 'uppercase' }}>
+            {fix.fixture.status.short}
+          </span>
+        </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <TeamBadge team={fix.teams.home} dim={fix.teams.away.winner === true} />
@@ -144,9 +161,10 @@ interface Props {
   upcoming: ApiFixture[];
   finished: ApiFixture[];
   live: ApiFixture[];
+  teamRanks?: Record<string, number>;
 }
 
-export default function Matches({ upcoming, finished, live }: Props) {
+export default function Matches({ upcoming, finished, live, teamRanks = {} }: Props) {
   const grid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '12px' };
   const now = new Date();
   const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
@@ -197,7 +215,7 @@ export default function Matches({ upcoming, finished, live }: Props) {
               {g.items.map(f =>
                 g.type === 'live' ? <LiveCard key={f.fixture.id} fix={f} /> :
                 g.type === 'upcoming' ? <UpcomingCard key={f.fixture.id} fix={f} /> :
-                <FinishedCard key={f.fixture.id} fix={f} />
+                <FinishedCard key={f.fixture.id} fix={f} teamRanks={teamRanks} />
               )}
             </div>
           </div>

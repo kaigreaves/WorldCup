@@ -108,6 +108,8 @@ export interface Storyline {
   playerPhoto: string;
   teamName: string;
   teamLogo: string;
+  goals: number;
+  assists: number;
 }
 
 function storyTag(name: string, goals: number, assists: number): string {
@@ -209,6 +211,8 @@ export function buildStorylines(entries: GreatnessEntry[]): Storyline[] {
     playerPhoto: e.player.photo,
     teamName: e.team.name,
     teamLogo: e.team.logo,
+    goals: e.goals,
+    assists: e.assists,
   }));
 }
 
@@ -281,6 +285,17 @@ export function buildTeamFlagMap(fixtures: ApiFixture[]): Record<string, string>
   for (const f of fixtures) {
     map[f.teams.home.name] = f.teams.home.logo;
     map[f.teams.away.name] = f.teams.away.logo;
+  }
+  return map;
+}
+
+// Build team name (lowercase) → rank within their group, from standings
+export function buildTeamRankMap(standings: StandingEntry[][]): Record<string, number> {
+  const map: Record<string, number> = {};
+  for (const group of standings) {
+    for (const entry of group) {
+      map[entry.team.name.toLowerCase()] = entry.rank;
+    }
   }
   return map;
 }
@@ -364,7 +379,9 @@ export function computeGreatness(scorers: ApiScorer[], assistsList: ApiScorer[])
     const goals = st.goals.total ?? 0;
     const assists = st.goals.assists ?? 0;
     const matches = st.games.appearences ?? 1;
-    const score = goals * 10 + assists * 6 + matches * 0.5;
+    const efficiency = matches > 0 ? (goals + assists) / matches : 0;
+    const effBonus = efficiency >= 2 ? 4 : efficiency >= 1 ? 2 : 0;
+    const score = goals * 10 + assists * 6 + effBonus + matches;
     map.set(s.player.id, {
       rank: 0,
       player: s.player,
@@ -385,7 +402,9 @@ export function computeGreatness(scorers: ApiScorer[], assistsList: ApiScorer[])
     const goals = st.goals.total ?? 0;
     const assists = st.goals.assists ?? 0;
     const matches = st.games.appearences ?? 1;
-    const score = goals * 10 + assists * 6 + matches * 0.5;
+    const efficiency = matches > 0 ? (goals + assists) / matches : 0;
+    const effBonus = efficiency >= 2 ? 4 : efficiency >= 1 ? 2 : 0;
+    const score = goals * 10 + assists * 6 + effBonus + matches;
     map.set(s.player.id, {
       rank: 0,
       player: s.player,

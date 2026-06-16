@@ -131,6 +131,20 @@ nav a:hover {
   }
 }
 
+/* Main content wrapper — right margin clears fixed sidebar on desktop */
+.main-wrapper {
+  margin-right: 280px;
+}
+
+@media (max-width: 899px) {
+  #leaderboard {
+    display: none;
+  }
+  .main-wrapper {
+    margin-right: 0;
+  }
+}
+
 /* Bottom nav bar spacing */
 .has-bottom-nav {
   padding-bottom: 68px;
