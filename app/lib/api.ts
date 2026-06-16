@@ -190,7 +190,7 @@ function storyHeadline(name: string, goals: number, assists: number, matches: nu
 }
 
 // Factual context — what the player has actually done
-function storyContext(name: string, goals: number, assists: number, matches: number, team: string): string {
+function storyContext(name: string, goals: number, assists: number, matches: number, team: string, cleanSheets = 0, position = 'F'): string {
   const n = name.toLowerCase();
   if (n.includes('messi')) return 'Every minute on this pitch is borrowed time. He plays like he knows it. Nobody wants it to end.';
   if (n.includes('mbappe') || n.includes('mbappé')) return "He was the best player at the last World Cup at 19. He's 27 now. This is the peak.";
@@ -198,20 +198,23 @@ function storyContext(name: string, goals: number, assists: number, matches: num
   const parts: string[] = [];
   if (goals > 0) parts.push(`${goals} goal${goals > 1 ? 's' : ''}`);
   if (assists > 0) parts.push(`${assists} assist${assists > 1 ? 's' : ''}`);
-  const statLine = parts.length > 0 ? parts.join(', ') : 'yet to score or assist';
+  if (cleanSheets > 0) parts.push(`${cleanSheets} clean sheet${cleanSheets > 1 ? 's' : ''}`);
+  const isKeeperOrDefender = position === 'G' || position === 'D';
+  const fallback = isKeeperOrDefender ? 'holding the line so far' : 'yet to score or assist';
+  const statLine = parts.length > 0 ? parts.join(', ') : fallback;
   return `${statLine} in ${matches} appearance${matches !== 1 ? 's' : ''} for ${team}.`;
 }
 
-export function buildStorylines(entries: GreatnessEntry[]): Storyline[] {
+export function buildStorylines(entries: LegacyEntry[]): Storyline[] {
   return entries.slice(0, 5).map((e, i) => ({
-    id: String(e.player.id),
-    tag: storyTag(e.player.name, e.goals, e.assists),
-    headline: storyHeadline(e.player.name, e.goals, e.assists, e.matches, e.team.name, i),
-    context: storyContext(e.player.name, e.goals, e.assists, e.matches, e.team.name),
-    playerName: e.player.name,
-    playerPhoto: e.player.photo,
-    teamName: e.team.name,
-    teamLogo: e.team.logo,
+    id: String(e.playerId),
+    tag: storyTag(e.name, e.goals, e.assists),
+    headline: storyHeadline(e.name, e.goals, e.assists, e.matches, e.teamName, i),
+    context: storyContext(e.name, e.goals, e.assists, e.matches, e.teamName, e.cleanSheets, e.position),
+    playerName: e.name,
+    playerPhoto: e.photo,
+    teamName: e.teamName,
+    teamLogo: e.teamLogo,
     goals: e.goals,
     assists: e.assists,
   }));
@@ -536,4 +539,488 @@ export function getTeamFixtures(fixtures: ApiFixture[], teamName: string): ApiFi
     )
     .sort((a, b) => new Date(b.fixture.date).getTime() - new Date(a.fixture.date).getTime())
     .slice(0, 4);
+}
+
+// ── Legacy Leaderboard ────────────────────────────────────────────────────────
+// Multi-factor scoring: goal context (equalizer/winner/PK), opponent quality,
+// stage multiplier, keeper/defender contributions, hat trick bonuses.
+
+// Pre-tournament FIFA rankings — stable, not affected by group stage results
+const FIFA_RANKINGS: Record<string, number> = {
+  'Argentina': 1, 'France': 2, 'England': 3, 'Belgium': 4, 'Brazil': 5,
+  'Portugal': 6, 'Netherlands': 7, 'Spain': 8, 'Croatia': 9, 'Italy': 10,
+  'Germany': 11, 'Uruguay': 12, 'Colombia': 13, 'Mexico': 14,
+  'United States': 15, 'USA': 15, 'Senegal': 16, 'Morocco': 17,
+  'Switzerland': 18, 'Japan': 19, 'Denmark': 22, 'Poland': 23,
+  'Australia': 24, 'Serbia': 25, 'Sweden': 25, 'Canada': 27,
+  'Ecuador': 28, 'Turkey': 30, 'Ukraine': 31, 'Cameroon': 32,
+  'Ghana': 33, 'Tunisia': 34, 'Chile': 35, 'Nigeria': 36,
+  'Algeria': 37, 'Peru': 38, 'Egypt': 39, 'Saudi Arabia': 40,
+  'Korea Republic': 26, 'South Korea': 26,
+  'IR Iran': 19, 'Iran': 19,
+  "Côte d'Ivoire": 21, 'Ivory Coast': 21,
+  'Bosnia & Herzegovina': 45, 'Costa Rica': 42,
+  'New Zealand': 70, 'Cape Verde Islands': 58, 'Cape Verde': 58,
+  'Georgia': 75, 'Panama': 46, 'Paraguay': 43,
+  'Venezuela': 45, 'Bolivia': 44, 'Honduras': 48,
+  'El Salvador': 49, 'Jamaica': 47, 'Haiti': 50,
+  'Indonesia': 130, 'Tanzania': 118, 'Guatemala': 51,
+  'Trinidad and Tobago': 52, 'Iraq': 60, 'Qatar': 41,
+};
+
+function getOQS(teamName: string, standings: StandingEntry[][]): number {
+  const rank = FIFA_RANKINGS[teamName] ?? 90;
+  // Steep curve: rank 1 → 1.0, rank 51 → 0.1
+  const fifaScore = Math.max(0.1, 1 - (rank - 1) / 50);
+  // Tournament form: points per game, 0–1 scale
+  const entry = standings.flat().find(s => s.team.name === teamName);
+  let tournScore = 0.3;
+  if (entry && entry.all.played > 0) {
+    tournScore = Math.min(1.0, entry.points / (entry.all.played * 3));
+  }
+  // 0.6 floor keeps OQS range narrow (0.6–1.0) so 2 goals vs weaker team
+  // always beats 1 goal vs stronger team — quality matters but doesn't dominate
+  return 0.6 + 0.4 * (fifaScore * 0.7 + tournScore * 0.3);
+}
+
+function getStageMultiplier(round: string): number {
+  const r = round.toLowerCase();
+  if (r.includes('final') && !r.includes('semi') && !r.includes('quarter') && !r.includes('3rd')) return 2.5;
+  if (r.includes('semi')) return 2.0;
+  if (r.includes('quarter')) return 1.6;
+  if (r.includes('16') || r.includes('round of 32')) return 1.3;
+  return 1.0; // group stage
+}
+
+// ── Fixture event fetching (cached 24h — immutable once match ends) ───────────
+
+interface RawEvent {
+  time: { elapsed: number; extra: number | null };
+  team: { id: number; name: string };
+  player: { id: number; name: string };
+  assist: { id: number | null; name: string | null };
+  type: string;
+  detail: string;
+}
+
+interface RawFixturePlayer {
+  team: { id: number; name: string; logo: string };
+  players: Array<{
+    player: { id: number; name: string; photo: string };
+    statistics: Array<{
+      games: { position: string; minutes: number | null; substitute: boolean };
+      goals: { total: number | null; conceded: number | null; saves: number | null };
+      tackles: { total: number | null; interceptions: number | null; blocks: number | null };
+      duels: { total: number | null; won: number | null };
+      penalty: { saved: number | null };
+    }>;
+  }>;
+}
+
+async function getFixtureEvents(fixtureId: number): Promise<RawEvent[]> {
+  return (await apiFetch<RawEvent[]>(`/fixtures/events?fixture=${fixtureId}`, 86400)) ?? [];
+}
+
+async function getFixturePlayerStats(fixtureId: number): Promise<RawFixturePlayer[]> {
+  return (await apiFetch<RawFixturePlayer[]>(`/fixtures/players?fixture=${fixtureId}`, 86400)) ?? [];
+}
+
+// ── Goal classification ───────────────────────────────────────────────────────
+
+interface ClassifiedGoal {
+  scorerPlayerId: number;
+  scorerName: string;
+  assistPlayerId: number | null;
+  assistName: string | null;
+  teamId: number;
+  isPenalty: boolean;
+  isEqualizer: boolean;
+  isGameWinner: boolean;
+}
+
+function classifyGoals(
+  events: RawEvent[],
+  homeTeamId: number,
+  finalHomeScore: number,
+  finalAwayScore: number,
+): ClassifiedGoal[] {
+  const goalEvents = events
+    .filter(e => e.type === 'Goal' && e.detail !== 'Own Goal' && e.detail !== 'Missed Penalty')
+    .sort((a, b) => (a.time.elapsed + (a.time.extra ?? 0)) - (b.time.elapsed + (b.time.extra ?? 0)));
+
+  let homeScore = 0;
+  let awayScore = 0;
+
+  const classified: ClassifiedGoal[] = goalEvents.map(e => {
+    const isHome = e.team.id === homeTeamId;
+    const prevHome = homeScore;
+    const prevAway = awayScore;
+    if (isHome) homeScore++; else awayScore++;
+
+    const wasLosing = isHome ? prevHome < prevAway : prevAway < prevHome;
+    const nowLevel = homeScore === awayScore;
+
+    return {
+      scorerPlayerId: e.player.id,
+      scorerName: e.player.name,
+      assistPlayerId: e.assist.id,
+      assistName: e.assist.name,
+      teamId: e.team.id,
+      isPenalty: e.detail === 'Penalty',
+      isEqualizer: wasLosing && nowLevel,
+      isGameWinner: false,
+      _homeAfter: homeScore,
+      _awayAfter: awayScore,
+    } as ClassifiedGoal & { _homeAfter: number; _awayAfter: number };
+  });
+
+  // Find game-winning goal: last goal by winning team from which lead was never surrendered
+  const homeWon = finalHomeScore > finalAwayScore;
+  const awayWon = finalAwayScore > finalHomeScore;
+  if (homeWon || awayWon) {
+    const winTeamIsHome = homeWon;
+    for (let i = classified.length - 1; i >= 0; i--) {
+      const g = classified[i] as ClassifiedGoal & { _homeAfter: number; _awayAfter: number };
+      const isWinTeam = winTeamIsHome ? g.teamId === homeTeamId : g.teamId !== homeTeamId;
+      if (!isWinTeam) continue;
+      const lead = winTeamIsHome ? g._homeAfter - g._awayAfter : g._awayAfter - g._homeAfter;
+      if (lead <= 0) continue;
+      // Check no subsequent goal erased the lead
+      const leadHeld = !(classified.slice(i + 1) as (ClassifiedGoal & { _homeAfter: number; _awayAfter: number })[]).some(later => {
+        const laterLead = winTeamIsHome ? later._homeAfter - later._awayAfter : later._awayAfter - later._homeAfter;
+        return laterLead <= 0;
+      });
+      if (leadHeld) { g.isGameWinner = true; break; }
+    }
+  }
+
+  return classified;
+}
+
+// ── Main legacy computation ───────────────────────────────────────────────────
+
+export interface LegacyEntry {
+  rank: number;
+  playerId: number;
+  name: string;
+  photo: string;
+  teamName: string;
+  teamLogo: string;
+  position: string; // 'G' | 'D' | 'M' | 'F'
+  // Display stats
+  goals: number;
+  assists: number;
+  matches: number;
+  cleanSheets: number;
+  penaltiesSaved: number;
+  equalizerGoals: number;
+  gameWinningGoals: number;
+  hatTricks: number;
+  // Score
+  legacyScore: number;
+  narrative: string;
+}
+
+export async function computeLegacyLeaderboard(
+  fixtures: ApiFixture[],
+  scorers: ApiScorer[],
+  assistsList: ApiScorer[],
+  standings: StandingEntry[][],
+): Promise<LegacyEntry[]> {
+  const finishedFixtures = fixtures.filter(f =>
+    f.fixture.status.short === 'FT' ||
+    f.fixture.status.short === 'AET' ||
+    f.fixture.status.short === 'PEN'
+  );
+
+  // Fallback team logos from fixture data (always available)
+  const teamLogoMap: Record<string, string> = {};
+  for (const f of fixtures) {
+    teamLogoMap[f.teams.home.name] = f.teams.home.logo;
+    teamLogoMap[f.teams.away.name] = f.teams.away.logo;
+  }
+  // Also build from scorer/assist data
+  for (const s of [...scorers, ...assistsList]) {
+    const st = s.statistics[0];
+    if (st) teamLogoMap[st.team.name] = st.team.logo;
+  }
+
+  // Fetch events + player stats for all finished fixtures in parallel (24h cache)
+  const [allEvents, allPlayerStats] = await Promise.all([
+    Promise.all(finishedFixtures.map(f => getFixtureEvents(f.fixture.id))),
+    Promise.all(finishedFixtures.map(f => getFixturePlayerStats(f.fixture.id))),
+  ]);
+
+  // ── Per-player accumulators ───────────────────────────────────────────────
+
+  interface PlayerAcc {
+    playerId: number;
+    name: string;
+    photo: string;
+    teamName: string;
+    teamLogo: string;
+    position: string;
+    legacyScore: number;
+    goals: number;
+    assists: number;
+    matches: number;
+    cleanSheets: number;
+    penaltiesSaved: number;
+    equalizerGoals: number;
+    gameWinningGoals: number;
+    goalsPerMatch: Map<number, number>; // fixtureId → goals in that match
+    // Keeper/defender accumulation
+    totalSaves: number;
+    minutesPlayed: number;
+    tackles: number;
+    interceptions: number;
+    blocks: number;
+    matchesPlayed: number;
+  }
+
+  const players = new Map<number, PlayerAcc>();
+
+  function getPlayer(id: number, name: string, photo: string, teamName: string, teamLogo: string, position: string): PlayerAcc {
+    if (!players.has(id)) {
+      players.set(id, {
+        playerId: id, name, photo, teamName, teamLogo, position,
+        legacyScore: 0, goals: 0, assists: 0, matches: 0,
+        cleanSheets: 0, penaltiesSaved: 0, equalizerGoals: 0, gameWinningGoals: 0,
+        goalsPerMatch: new Map(), totalSaves: 0, minutesPlayed: 0,
+        tackles: 0, interceptions: 0, blocks: 0, matchesPlayed: 0,
+      });
+    }
+    return players.get(id)!;
+  }
+
+  // ── Process each fixture ──────────────────────────────────────────────────
+
+  for (let fi = 0; fi < finishedFixtures.length; fi++) {
+    const fix = finishedFixtures[fi];
+    const events = allEvents[fi];
+    const playerStats = allPlayerStats[fi];
+
+    const homeTeamId = fix.teams.home.id;
+    const finalHomeScore = fix.goals.home ?? 0;
+    const finalAwayScore = fix.goals.away ?? 0;
+    const round = fix.league.round;
+    const stageMultiplier = getStageMultiplier(round);
+
+    const homeOQS = getOQS(fix.teams.away.name, standings); // scoring vs the other team
+    const awayOQS = getOQS(fix.teams.home.name, standings);
+
+    // Classify goals
+    const goals = classifyGoals(events, homeTeamId, finalHomeScore, finalAwayScore);
+
+    // Count goals per player in this fixture (for hat trick detection)
+    const goalsThisMatch = new Map<number, number>();
+    for (const g of goals) {
+      goalsThisMatch.set(g.scorerPlayerId, (goalsThisMatch.get(g.scorerPlayerId) ?? 0) + 1);
+    }
+
+    // Score each goal
+    for (const g of goals) {
+      const oqs = g.teamId === homeTeamId ? homeOQS : awayOQS;
+      const baseGoal = g.isPenalty ? 7 : 10;
+      const contextBonus = g.isEqualizer ? 6 : g.isGameWinner ? 8 : 0;
+      const pts = (baseGoal + contextBonus) * oqs * stageMultiplier;
+
+      // Scorer — look up from player stats for photo/team
+      const scorerStats = playerStats.flatMap(t => t.players).find(p => p.player.id === g.scorerPlayerId);
+      const teamEntry = playerStats.find(t => t.players.some(p => p.player.id === g.scorerPlayerId));
+      const scorerTeamName = teamEntry?.team.name ?? (g.teamId === homeTeamId ? fix.teams.home.name : fix.teams.away.name);
+      const scorer = getPlayer(
+        g.scorerPlayerId, g.scorerName,
+        scorerStats?.player.photo ?? '',
+        scorerTeamName,
+        teamEntry?.team.logo ?? teamLogoMap[scorerTeamName] ?? '',
+        scorerStats?.statistics[0]?.games.position ?? 'F',
+      );
+      scorer.legacyScore += pts;
+      scorer.goals += 1;
+      if (g.isEqualizer) scorer.equalizerGoals += 1;
+      if (g.isGameWinner) scorer.gameWinningGoals += 1;
+      const matchGoals = (scorer.goalsPerMatch.get(fix.fixture.id) ?? 0) + 1;
+      scorer.goalsPerMatch.set(fix.fixture.id, matchGoals);
+
+      // Assist
+      if (g.assistPlayerId) {
+        const baseAssist = g.isPenalty ? 1 : 6;
+        const assistBonus = (!g.isPenalty && (g.isEqualizer || g.isGameWinner)) ? 3 : 0;
+        const assistPts = (baseAssist + assistBonus) * oqs * stageMultiplier;
+
+        const aStats = playerStats.flatMap(t => t.players).find(p => p.player.id === g.assistPlayerId);
+        const aTeam = playerStats.find(t => t.players.some(p => p.player.id === g.assistPlayerId));
+        const aTeamName = aTeam?.team.name ?? (g.teamId === homeTeamId ? fix.teams.home.name : fix.teams.away.name);
+        const assister = getPlayer(
+          g.assistPlayerId, g.assistName ?? '',
+          aStats?.player.photo ?? '',
+          aTeamName,
+          aTeam?.team.logo ?? teamLogoMap[aTeamName] ?? '',
+          aStats?.statistics[0]?.games.position ?? 'M',
+        );
+        assister.legacyScore += assistPts;
+        assister.assists += 1;
+      }
+    }
+
+    // Hat trick bonus (per match)
+    for (const [pid, gCount] of goalsThisMatch) {
+      if (gCount >= 3) {
+        const p = players.get(pid);
+        if (p) p.legacyScore += 15;
+      }
+    }
+
+    // ── Keeper & defender stats from fixture player data ──────────────────
+
+    for (const teamData of playerStats) {
+      const isHomeTeam = teamData.team.id === homeTeamId;
+      const teamOQS = isHomeTeam ? homeOQS : awayOQS;
+      const teamConceded = isHomeTeam ? finalAwayScore : finalHomeScore;
+
+      for (const { player, statistics } of teamData.players) {
+        const stat = statistics[0];
+        if (!stat) continue;
+        const pos = stat.games.position;
+        const mins = stat.games.minutes ?? 0;
+        if (mins === 0 && stat.games.substitute) continue; // didn't play
+
+        const tLogo = teamData.team.logo || teamLogoMap[teamData.team.name] || '';
+        const p = getPlayer(player.id, player.name, player.photo, teamData.team.name, tLogo, pos);
+        p.matchesPlayed += 1;
+        p.minutesPlayed += mins;
+
+        if (pos === 'G') {
+          // Goalkeeper scoring
+          const saves = stat.goals.saves ?? 0;
+          const pkSaved = stat.penalty.saved ?? 0;
+          const cleanSheet = teamConceded === 0 && mins >= 60;
+
+          p.totalSaves += saves;
+          p.penaltiesSaved += pkSaved;
+          if (cleanSheet) {
+            p.cleanSheets += 1;
+            p.legacyScore += 8 * teamOQS * stageMultiplier;
+          }
+          p.legacyScore += pkSaved * 10 * teamOQS * stageMultiplier;
+          // Saves above average (>4 per game): small bonus
+          if (saves > 4) p.legacyScore += (saves - 4) * 0.4;
+
+        } else if (pos === 'D') {
+          // Defender — accumulate raw stats for qualifying check later
+          p.tackles += stat.tackles.total ?? 0;
+          p.interceptions += stat.tackles.interceptions ?? 0;
+          p.blocks += stat.tackles.blocks ?? 0;
+          // Clean sheet partial credit
+          const cleanSheet = teamConceded === 0 && mins >= 60;
+          if (cleanSheet) {
+            p.cleanSheets += 1;
+            p.legacyScore += 5 * teamOQS * stageMultiplier;
+          }
+        }
+      }
+    }
+  }
+
+  // ── Consistency bonus for all tracked players ─────────────────────────────
+
+  // Seed match counts from scorer/assist API data (more reliable than fixture player counting)
+  for (const s of [...scorers, ...assistsList]) {
+    const st = s.statistics[0];
+    if (!st) continue;
+    const p = players.get(s.player.id);
+    if (p) {
+      p.matches = Math.max(p.matches, st.games.appearences ?? 0);
+    } else {
+      // Outfield player not yet in map (0 goals/assists in our events, but in top lists)
+      const entry = getPlayer(
+        s.player.id, s.player.name, s.player.photo,
+        st.team.name, st.team.logo || teamLogoMap[st.team.name] || '', 'F',
+      );
+      entry.matches = st.games.appearences ?? 0;
+      entry.goals = st.goals.total ?? 0;
+      entry.assists = st.goals.assists ?? 0;
+    }
+  }
+
+  // Apply consistency bonus (small, doesn't dominate)
+  for (const p of players.values()) {
+    const m = p.matches || p.matchesPlayed;
+    p.legacyScore += m * 0.5;
+  }
+
+  // ── Hat trick count (for display) ─────────────────────────────────────────
+
+  // ── Build final entries ───────────────────────────────────────────────────
+
+  const allEntries: LegacyEntry[] = Array.from(players.values()).map(p => {
+    let hatTricks = 0;
+    for (const g of p.goalsPerMatch.values()) if (g >= 3) hatTricks++;
+
+    return {
+      rank: 0,
+      playerId: p.playerId,
+      name: p.name,
+      photo: p.photo,
+      teamName: p.teamName,
+      teamLogo: p.teamLogo,
+      position: p.position,
+      goals: p.goals,
+      assists: p.assists,
+      matches: Math.max(p.matches, p.matchesPlayed),
+      cleanSheets: p.cleanSheets,
+      penaltiesSaved: p.penaltiesSaved,
+      equalizerGoals: p.equalizerGoals,
+      gameWinningGoals: p.gameWinningGoals,
+      hatTricks,
+      legacyScore: Math.round(p.legacyScore * 10) / 10,
+      narrative: getNarrative(p.name, p.goals, p.assists),
+    };
+  });
+
+  // ── Defender qualifying threshold ─────────────────────────────────────────
+  // Defenders must rank top-5 in combined defensive actions per 90 to be included
+
+  const defenders = allEntries.filter(e => e.position === 'D' && e.matches > 0);
+  const defPer90 = defenders.map(e => {
+    const p = players.get(e.playerId)!;
+    const per90 = p.minutesPlayed > 0 ? (p.tackles + p.interceptions + p.blocks) / (p.minutesPlayed / 90) : 0;
+    return { entry: e, per90 };
+  }).sort((a, b) => b.per90 - a.per90);
+
+  const qualifiedDefIds = new Set(defPer90.slice(0, 5).map(d => d.entry.playerId));
+
+  // Remove defenders who don't qualify
+  const qualified = allEntries.filter(e => e.position !== 'D' || qualifiedDefIds.has(e.playerId));
+
+  // Sort by score
+  const sorted = qualified
+    .filter(e => e.legacyScore > 0)
+    .sort((a, b) => b.legacyScore - a.legacyScore);
+
+  // ── Enforce keeper/defender constraints ───────────────────────────────────
+  // Max 3 total non-outfield in list; always at least 1
+
+  const top20: LegacyEntry[] = [];
+  let nonOutfieldCount = 0;
+
+  for (const entry of sorted) {
+    const isNonOutfield = entry.position === 'G' || entry.position === 'D';
+    if (isNonOutfield && nonOutfieldCount >= 3) continue;
+    top20.push(entry);
+    if (isNonOutfield) nonOutfieldCount++;
+    if (top20.length >= 20) break;
+  }
+
+  // Ensure at least 1 non-outfield player
+  if (nonOutfieldCount === 0) {
+    const bestKeeper = sorted.find(e => e.position === 'G' || e.position === 'D');
+    if (bestKeeper && top20.length >= 20) top20[19] = bestKeeper;
+    else if (bestKeeper) top20.push(bestKeeper);
+  }
+
+  return top20
+    .sort((a, b) => b.legacyScore - a.legacyScore)
+    .map((e, i) => ({ ...e, rank: i + 1 }));
 }

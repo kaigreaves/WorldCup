@@ -9,10 +9,13 @@
   --red:     #ED2939;
   --white:   #FFFFFF;
   --gold:    #C9A84C;
-  --gold-dim: rgba(201,168,76,0.15);
-  --gold-border: rgba(201,168,76,0.25);
+  --gold-dim: rgba(201,168,76,0.12);
+  --gold-border: rgba(201,168,76,0.22);
   --muted:   rgba(255,255,255,0.45);
-  --muted-2: rgba(255,255,255,0.18);
+  --muted-2: rgba(255,255,255,0.15);
+  /* Glass */
+  --glass-bg: rgba(0, 17, 43, 0.72);
+  --glass-border: rgba(201,168,76,0.18);
 }
 
 @theme inline {
@@ -20,8 +23,10 @@
   --color-foreground: var(--white);
 }
 
-*, *::before, *::after {
-  box-sizing: border-box;
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
 }
 
 html, body {
@@ -37,12 +42,12 @@ body {
   font-size: 14px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Typography */
-.font-serif {
-  font-family: 'Cormorant Garamond', Georgia, serif;
-}
+/* ── Typography ─────────────────────────────────────────────────────────────── */
+
+.font-serif { font-family: 'Cormorant Garamond', Georgia, serif; }
 
 h1, h2, h3 {
   font-family: 'Cormorant Garamond', Georgia, serif;
@@ -51,30 +56,52 @@ h1, h2, h3 {
   line-height: 1.15;
 }
 
-/* Luxury card */
+/* ── Cards ──────────────────────────────────────────────────────────────────── */
+
 .card {
-  background: var(--navy-2);
+  background: rgba(0, 23, 68, 0.6);
   border: 1px solid var(--gold-border);
-  border-radius: 2px;
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
-/* Gold divider line */
+.card:hover {
+  border-color: rgba(201,168,76,0.4);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.35), 0 0 0 1px rgba(201,168,76,0.08);
+}
+
+/* ── Glass surface (sidebar, nav, header) ────────────────────────────────────── */
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--glass-border);
+}
+
+/* ── Gold divider ─────────────────────────────────────────────────────────── */
+
 .gold-line {
   height: 1px;
   background: linear-gradient(to right, transparent, var(--gold), transparent);
+  opacity: 0.6;
 }
 
-/* Label / eyebrow text */
+/* ── Labels ────────────────────────────────────────────────────────────────── */
+
 .label {
   font-family: 'Inter', sans-serif;
   font-size: 10px;
   font-weight: 500;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--gold);
 }
 
-/* Rank number style */
+/* ── Rank ──────────────────────────────────────────────────────────────────── */
+
 .rank {
   font-family: 'Cormorant Garamond', serif;
   font-size: 42px;
@@ -84,75 +111,111 @@ h1, h2, h3 {
   line-height: 1;
 }
 
-/* Nav links */
-nav a {
-  transition: color 0.15s ease;
-}
-nav a:hover {
-  color: var(--gold) !important;
-}
+/* ── Animations ─────────────────────────────────────────────────────────────── */
 
-/* Utility */
-.mb-8 { margin-bottom: 2rem; }
-.mb-3 { margin-bottom: 0.75rem; }
-.mt-4 { margin-top: 1rem; }
-
-/* Pulse animation for loading indicator */
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
 }
 
-/* Fixed right sidebar — always visible like Claude's sidebar */
-.sidebar-fixed {
-  display: none;
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-@media (min-width: 900px) {
-  .sidebar-fixed {
-    display: block;
-    position: fixed;
-    top: 0;
-    right: 0;
-    width: 300px;
-    height: 100vh;
-    border-left: 1px solid var(--gold-border);
-    background: var(--navy);
-    overflow-y: auto;
-    z-index: 50;
-    padding: 112px 24px 24px; /* clears header (64px) + nav (48px) */
-  }
-  .sidebar-fixed::-webkit-scrollbar { width: 3px; }
-  .sidebar-fixed::-webkit-scrollbar-thumb { background: var(--gold-border); }
-
-  /* Push main content left to avoid overlap */
-  .main-with-sidebar {
-    margin-right: 300px;
-  }
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
-/* Main content wrapper — right margin clears fixed sidebar on desktop */
-.main-wrapper {
-  margin-right: 280px;
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
 }
 
-/* Mobile leaderboard — hidden on desktop, shown on mobile */
-.mobile-leaderboard {
-  display: none;
+@keyframes liveGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(74,222,128,0.4); }
+  50%       { box-shadow: 0 0 0 5px rgba(74,222,128,0); }
 }
 
-/* Rankings tab in bottom nav — hidden on desktop, shown on mobile */
-.rankings-tab {
-  display: none;
+.animate-fade-up  { animation: fadeUp  0.4s cubic-bezier(0.16,1,0.3,1) both; }
+.animate-fade-in  { animation: fadeIn  0.3s ease both; }
+
+/* Panel content fade when switching tabs */
+.section-panel-content {
+  animation: fadeUp 0.35s cubic-bezier(0.16,1,0.3,1) both;
 }
+
+/* ── Nav links ────────────────────────────────────────────────────────────── */
+
+nav a { transition: color 0.15s ease; }
+nav a:hover { color: var(--gold) !important; }
+
+/* ── Utility ─────────────────────────────────────────────────────────────── */
+
+.mb-8 { margin-bottom: 2rem; }
+.mb-3 { margin-bottom: 0.75rem; }
+.mt-4 { margin-top: 1rem; }
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--gold-border); border-radius: 99px; }
+
+/* ── Fixed sidebar ────────────────────────────────────────────────────────── */
+
+.main-wrapper { margin-right: 288px; }
+
+.mobile-leaderboard { display: none; }
+.rankings-tab       { display: none; }
+
+/* ── Bottom nav (mobile) ─────────────────────────────────────────────────── */
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 62px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  border-top: 1px solid var(--glass-border);
+  display: flex;
+  z-index: 300;
+  /* Safe-area inset for iPhone notch */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.bottom-nav-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  border-top: 2px solid transparent;
+  cursor: pointer;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  padding: 0 4px;
+  transition: color 0.2s ease, border-color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bottom-nav-btn.active {
+  color: var(--gold);
+  border-top-color: var(--gold);
+  font-weight: 500;
+}
+
+/* ── Responsive breakpoint ────────────────────────────────────────────────── */
 
 @media (max-width: 899px) {
-  #leaderboard {
-    display: none;
-  }
-  .main-wrapper {
-    margin-right: 0;
-  }
+  #leaderboard       { display: none !important; }
+  .main-wrapper      { margin-right: 0; }
   .mobile-leaderboard {
     display: block;
     border-bottom: 1px solid var(--gold-border);
@@ -163,17 +226,129 @@ nav a:hover {
     align-items: center;
     justify-content: center;
   }
-  main {
-    padding-top: 28px !important;
+  main { padding-top: 24px !important; }
+}
+
+@media (min-width: 900px) {
+  .bottom-nav { display: none; }
+}
+
+/* ── Desktop horizontal tab strip ─────────────────────────────────────────── */
+
+.desktop-tabs {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .desktop-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--gold-border);
+    margin-bottom: 28px;
+    position: sticky;
+    top: 64px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    z-index: 90;
+    padding: 4px 0;
   }
 }
 
-/* Bottom nav bar spacing */
-.has-bottom-nav {
-  padding-bottom: 68px;
+.desktop-tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  padding: 12px 16px;
+  transition: color 0.2s ease, border-color 0.2s ease;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: var(--navy); }
-::-webkit-scrollbar-thumb { background: var(--gold-border); border-radius: 2px; }
+.desktop-tab-btn:hover { color: rgba(255,255,255,0.75); }
+
+.desktop-tab-btn.active {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+  font-weight: 500;
+}
+
+/* ── Leaderboard link (Story / Spotlight cards) ──────────────────────────── */
+
+.leaderboard-link {
+  display: block;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: break-word;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-decoration: none;
+  text-align: left;
+  opacity: 0.85;
+  transition: opacity 0.2s ease;
+}
+
+.leaderboard-link:hover { opacity: 1; }
+
+/* ── Desktop sidebar glass ────────────────────────────────────────────────── */
+
+#leaderboard {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+}
+
+/* ── Header glass ─────────────────────────────────────────────────────────── */
+
+header {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+}
+
+/* ── Comment blocks ───────────────────────────────────────────────────────── */
+
+.comment-block {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  padding: 12px 14px;
+  transition: background 0.2s ease;
+}
+
+.comment-block:hover {
+  background: rgba(255,255,255,0.06);
+}
+
+/* ── Score ticker ─────────────────────────────────────────────────────────── */
+
+.ticker-track {
+  animation: ticker 30s linear infinite;
+  will-change: transform;
+}
+
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* ── Live dot ──────────────────────────────────────────────────────────────── */
+
+.live-dot {
+  animation: pulse 1.5s ease infinite, liveGlow 2s ease infinite;
+}
+
+/* ── Leaderboard row hover ─────────────────────────────────────────────────── */
+
+.lb-row {
+  transition: background 0.18s ease;
+  border-radius: 8px;
+}
+.lb-row:hover { background: rgba(201,168,76,0.07) !important; }

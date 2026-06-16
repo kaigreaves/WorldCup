@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import type { StandingEntry } from '../lib/api';
 
 interface Props {
@@ -74,7 +75,7 @@ export default function GroupStandings({ groups }: Props) {
               <span style={{ fontSize: '10px', color: 'var(--muted)', textAlign: 'center' }}>{row.rank}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
                 {row.team.logo && (
-                  <img src={row.team.logo} alt={row.team.name} width={14} height={14} style={{ objectFit: 'contain', flexShrink: 0 }} />
+                  <Image src={row.team.logo} alt={row.team.name} width={14} height={14} style={{ objectFit: 'contain', flexShrink: 0 }} />
                 )}
                 <span style={{ fontSize: '11px', color: 'var(--white)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {row.team.name}

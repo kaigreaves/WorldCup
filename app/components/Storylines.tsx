@@ -1,5 +1,7 @@
+import Image from 'next/image';
 import type { Storyline } from '../lib/api';
 import { PlayerFanComment } from './RedditShell';
+import LeaderboardLink from './LeaderboardLink';
 
 function getSectionHeadline(storylines: Storyline[]): string {
   const top = storylines[0];
@@ -37,6 +39,7 @@ export default function Storylines({ storylines }: { storylines: Storyline[] }) 
         <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '10px', fontStyle: 'italic' }}>
           The arcs defining World Cup 2026 — tracked by the fans who are living it
         </p>
+        <LeaderboardLink style={{ marginTop: '12px' }}>See the full Legacy Leaderboard →</LeaderboardLink>
       </div>
 
       {/* Hero card — top performer */}
@@ -67,12 +70,14 @@ function HeroCard({ story }: { story: Storyline }) {
       {/* Photo panel */}
       <div style={{ position: 'relative', overflow: 'hidden', minHeight: '260px' }}>
         {story.playerPhoto ? (
-          <img
+          <Image
             src={story.playerPhoto}
             alt={story.playerName}
+            fill
+            sizes="200px"
             style={{
-              width: '100%', height: '100%', objectFit: 'cover',
-              objectPosition: 'top center', display: 'block', filter: 'brightness(0.85)',
+              objectFit: 'cover',
+              objectPosition: 'top center', filter: 'brightness(0.85)',
             }}
           />
         ) : (
@@ -90,7 +95,7 @@ function HeroCard({ story }: { story: Storyline }) {
         </div>
         {story.teamLogo && (
           <div style={{ position: 'absolute', bottom: '12px', left: '12px' }}>
-            <img src={story.teamLogo} alt={story.teamName} width={28} height={28} style={{ objectFit: 'contain', opacity: 0.9 }} />
+            <Image src={story.teamLogo} alt={story.teamName} width={28} height={28} style={{ objectFit: 'contain', opacity: 0.9 }} />
           </div>
         )}
       </div>
@@ -121,12 +126,14 @@ function StoryCard({ story }: { story: Storyline }) {
     }}>
       <div style={{ position: 'relative', minHeight: '160px', overflow: 'hidden' }}>
         {story.playerPhoto ? (
-          <img
+          <Image
             src={story.playerPhoto}
             alt={story.playerName}
+            fill
+            sizes="120px"
             style={{
-              width: '100%', height: '100%', objectFit: 'cover',
-              objectPosition: 'top center', display: 'block', filter: 'brightness(0.8)',
+              objectFit: 'cover',
+              objectPosition: 'top center', filter: 'brightness(0.8)',
             }}
           />
         ) : (
@@ -146,7 +153,7 @@ function StoryCard({ story }: { story: Storyline }) {
       <div style={{ padding: '20px 24px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
           {story.teamLogo && (
-            <img src={story.teamLogo} alt={story.teamName} width={18} height={18}
+            <Image src={story.teamLogo} alt={story.teamName} width={18} height={18}
               style={{ objectFit: 'contain', marginTop: '4px', flexShrink: 0, opacity: 0.9 }} />
           )}
           <h3 style={{

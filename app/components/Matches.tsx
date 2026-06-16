@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import type { ApiFixture } from '../lib/api';
 import { MatchFanComments } from './RedditShell';
 
@@ -26,7 +27,7 @@ function formatDate(utcDate: string) {
 function TeamBadge({ team, dim }: { team: ApiFixture['teams']['home']; dim?: boolean }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, opacity: dim ? 0.45 : 1 }}>
-      {team.logo && <img src={team.logo} alt={team.name} width={28} height={28} style={{ objectFit: 'contain' }} />}
+      {team.logo && <Image src={team.logo} alt={team.name} width={28} height={28} style={{ objectFit: 'contain' }} />}
       <span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.05rem', color: 'var(--white)', whiteSpace: 'nowrap' }}>
         {team.name}
       </span>

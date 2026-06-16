@@ -4,6 +4,7 @@ import {
   getTopAssists,
   getStandings,
   computeGreatness,
+  computeLegacyLeaderboard,
   buildStorylines,
   buildSpotlightPlayers,
   buildTeamFlagMap,
@@ -13,6 +14,7 @@ import {
   getFinishedFixtures,
   getLiveFixtures,
 } from './lib/api';
+import Image from 'next/image';
 import Storylines from './components/Storylines';
 import GreatnessLeaderboard from './components/GreatnesLeaderboard';
 import GroupStandings from './components/GroupStandings';
@@ -22,7 +24,7 @@ import SectionPanel from './components/SectionPanel';
 import MatchTicker from './components/MatchTicker';
 import RecapBanner from './components/RecapBanner';
 import HeroCTA from './components/HeroCTA';
-import { RedditDataLoader, PerformersSection, FanVoiceSection } from './components/RedditShell';
+import { RedditDataLoader, PerformersSection, FanVoiceSection, TournamentFavourites } from './components/RedditShell';
 
 export default async function Page() {
   const [fixtures, scorers, assists, standings] = await Promise.all([
@@ -37,7 +39,8 @@ export default async function Page() {
   const allAssists = assists ?? [];
 
   const greatnessEntries = computeGreatness(allScorers, allAssists);
-  const storylines = buildStorylines(greatnessEntries);
+  const legacyEntries = await computeLegacyLeaderboard(allFixtures, allScorers, allAssists, standings);
+  const storylines = buildStorylines(legacyEntries);
   const spotlightPlayers = buildSpotlightPlayers(greatnessEntries, allScorers, allAssists);
 
   // Name → { photo, teamLogo } lookup for client components (Performers)
@@ -95,7 +98,7 @@ export default async function Page() {
       } as React.CSSProperties}>
         {/* WC 2026 badge */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', opacity: 0.6 }}>
-          <img
+          <Image
             src="https://media.api-sports.io/football/leagues/1.png"
             alt="FIFA World Cup 2026"
             width={22}
@@ -106,7 +109,7 @@ export default async function Page() {
             FIFA World Cup 2026
           </span>
         </div>
-        <GreatnessLeaderboard entries={greatnessEntries} compact />
+        <GreatnessLeaderboard entries={legacyEntries} compact />
         <GroupStandings groups={standings} />
       </aside>
 
@@ -127,9 +130,11 @@ export default async function Page() {
           zIndex: 100,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <img
+            <Image
               src="https://media.api-sports.io/football/leagues/1.png"
               alt="FIFA World Cup 2026"
+              width={144}
+              height={144}
               style={{ height: '36px', width: 'auto', objectFit: 'contain', display: 'block' }}
             />
             <div style={{
@@ -166,6 +171,11 @@ export default async function Page() {
         {/* Recap banner — shown if matches finished since last visit */}
         <RecapBanner fixtures={allFixtures} />
 
+        {/* Mobile leaderboard — first thing seen on phone, hero stays right below */}
+        <div className="mobile-leaderboard" id="mobile-rankings" style={{ padding: '20px 20px 8px' }}>
+          <GreatnessLeaderboard entries={legacyEntries} compact />
+        </div>
+
         {/* Hero */}
         <div style={{
           position: 'relative',
@@ -176,10 +186,13 @@ export default async function Page() {
           alignItems: 'center',
         }}>
           {/* Mbappé background photo — right-aligned, no distortion */}
-          <img
+          <Image
             src="/Mbappe-hero.jpg"
             alt=""
             aria-hidden="true"
+            width={3538}
+            height={2359}
+            priority
             style={{
               position: 'absolute',
               top: 0,
@@ -210,7 +223,7 @@ export default async function Page() {
           {/* Text content */}
           <div style={{ position: 'relative', zIndex: 2, padding: '56px clamp(20px, 4vw, 40px) 48px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-              <img
+              <Image
                 src="https://media.api-sports.io/football/leagues/1.png"
                 alt="FIFA World Cup 2026"
                 width={32}
@@ -251,11 +264,6 @@ export default async function Page() {
           </div>
         </div>
 
-        {/* Mobile leaderboard — always visible on phones, hidden on desktop (sidebar handles it) */}
-        <div className="mobile-leaderboard" id="mobile-rankings" style={{ padding: '28px 20px 16px' }}>
-          <GreatnessLeaderboard entries={greatnessEntries} compact />
-        </div>
-
         {/* Main */}
         <main style={{ padding: '40px clamp(16px, 4vw, 40px) 56px', maxWidth: '900px' }}>
           <RedditDataLoader fixtures={fixturesForReddit} />
@@ -266,6 +274,7 @@ export default async function Page() {
               <Matches key="matches" upcoming={upcomingMatches} finished={finishedMatches} live={liveMatches} teamRanks={teamRanks} />,
               <div key="performers" id="performers"><PerformersSection headless playerMeta={playerMeta} /></div>,
               <FanVoiceSection key="fanvoice" headless />,
+              <TournamentFavourites key="favourites" />,
               <PlayerSpotlight
                 key="spotlight"
                 players={spotlightPlayers}

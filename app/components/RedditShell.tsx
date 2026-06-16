@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { fetchRedditData, matchKey } from '../lib/reddit-client';
+import Image from 'next/image';
+import { matchKey } from '../lib/reddit-client';
+import { initRedditStore, subscribeReddit } from '../lib/reddit-store';
 import type { RedditClientData, RedditComment, PerformerEntry } from '../lib/reddit-client';
 
 // ── Shared ────────────────────────────────────────────────────────────────────
@@ -9,10 +11,8 @@ import type { RedditClientData, RedditComment, PerformerEntry } from '../lib/red
 function truncate(text: string, max = 280): string {
   if (text.length <= max) return text;
   const cut = text.slice(0, max);
-  // Try to end at a sentence boundary rather than mid-word
   const lastEnd = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '));
   if (lastEnd > max * 0.55) return text.slice(0, lastEnd + 1);
-  // Fall back to last word boundary
   const lastSpace = cut.lastIndexOf(' ');
   return (lastSpace > max * 0.7 ? cut.slice(0, lastSpace) : cut).trimEnd() + '…';
 }
@@ -26,21 +26,15 @@ function timeAgo(iso: string): string {
 
 function CommentBlock({ comment }: { comment: RedditComment }) {
   return (
-    <blockquote style={{
-      margin: 0,
-      padding: '12px 14px',
-      background: 'rgba(0,0,0,0.2)',
-      borderLeft: '2px solid var(--gold-border)',
-      borderRadius: '1px',
-    }}>
-      <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.82)', fontStyle: 'italic', lineHeight: '1.65', margin: '0 0 8px 0' }}>
+    <blockquote className="comment-block" style={{ margin: 0 }}>
+      <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)', fontStyle: 'italic', lineHeight: '1.7', margin: '0 0 10px 0' }}>
         &ldquo;{truncate(comment.body)}&rdquo;
       </p>
-      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-        <span style={{ fontSize: '11px', color: 'var(--gold)', opacity: 0.8 }}>↑ {comment.score.toLocaleString()}</span>
+      <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '11px', color: 'var(--gold)', fontWeight: 500 }}>↑ {comment.score.toLocaleString()}</span>
         <span style={{ fontSize: '11px', color: 'var(--muted)' }}>u/{comment.author}</span>
         {comment.thread_title && (
-          <span style={{ fontSize: '11px', color: 'var(--muted)', opacity: 0.5 }}>
+          <span style={{ fontSize: '11px', color: 'var(--muted)', opacity: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px' }}>
             · {comment.thread_title.replace(/\s*\|.*/, '').trim()}
           </span>
         )}
@@ -57,10 +51,20 @@ function Loading() {
   );
 }
 
+// Shared hook — returns data once available, null while loading
+function useRedditData<T>(select: (d: RedditClientData) => T): T | null {
+  const [value, setValue] = useState<T | null>(null);
+  useEffect(() => {
+    return subscribeReddit(data => setValue(select(data)));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return value;
+}
+
 // ── Match comments ────────────────────────────────────────────────────────────
 
 export function MatchFanComments({
-  homeTeam, awayTeam, label, isFinished,
+  homeTeam, awayTeam, label,
 }: {
   homeTeam: string;
   awayTeam: string;
@@ -70,34 +74,16 @@ export function MatchFanComments({
   const [comments, setComments] = useState<RedditComment[] | null>(null);
 
   useEffect(() => {
-    const cached = sessionStorage.getItem('reddit_data_v6');
-    if (cached) {
-      const data: RedditClientData = JSON.parse(cached);
-      const key = matchKey(homeTeam, awayTeam);
-      setComments(data.matchComments[key] ?? []);
-      return;
-    }
-    // Data not yet loaded — RedditDataLoader will handle it
+    const key = matchKey(homeTeam, awayTeam);
+    return subscribeReddit(data => setComments(data.matchComments[key] ?? []));
   }, [homeTeam, awayTeam]);
 
-  useEffect(() => {
-    const handler = (e: CustomEvent<RedditClientData>) => {
-      const key = matchKey(homeTeam, awayTeam);
-      setComments(e.detail.matchComments[key] ?? []);
-    };
-    window.addEventListener('reddit-data-ready', handler as EventListener);
-    return () => window.removeEventListener('reddit-data-ready', handler as EventListener);
-  }, [homeTeam, awayTeam, isFinished]);
-
-  // Show nothing while comments are loading
-  if (comments === null) return null;
-
-  if (comments.length === 0) return null;
+  if (comments === null || comments.length === 0) return null;
 
   return (
-    <div style={{ borderTop: '1px solid var(--gold-border)', paddingTop: '16px', marginTop: '4px' }}>
-      <p className="label" style={{ marginBottom: '12px', color: 'var(--muted)' }}>{label}</p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+    <div style={{ borderTop: '1px solid var(--gold-border)', paddingTop: '18px', marginTop: '8px' }}>
+      <p className="label" style={{ marginBottom: '14px' }}>{label}</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {comments.map((c, i) => <CommentBlock key={c.id ?? i} comment={c} />)}
       </div>
     </div>
@@ -109,46 +95,24 @@ export function MatchFanComments({
 export function PlayerFanComment({ playerName }: { playerName: string }) {
   const [comment, setComment] = useState<RedditComment | null | undefined>(undefined);
 
-  const findComment = (data: RedditClientData) => {
-    const nameLower = playerName.toLowerCase();
-    // last name, or for single-word names the full name
-    const parts = playerName.split(' ');
-    const lastName = (parts.pop() ?? '').toLowerCase();
-    const firstName = (parts[0] ?? '').toLowerCase();
-
-    // 1. Try pre-computed tracked playerComments
-    const key = Object.keys(data.playerComments).find(k =>
-      k.toLowerCase().includes(lastName) ||
-      nameLower.includes(k.toLowerCase())
-    );
-    if (key) { setComment(data.playerComments[key]); return; }
-
-    // 2. Search allComments for any mention of the player's last name (≥4 chars)
-    const searchTerms = [lastName, firstName].filter(t => t.length >= 4);
-    if (searchTerms.length > 0) {
-      const pool = [...(data.allComments ?? []), ...data.fanVoiceComments];
-      // prefer comments that explicitly mention the name
-      const found = pool
-        .filter(c => searchTerms.some(t => c.body.toLowerCase().includes(t)))
-        .sort((a, b) => b.score - a.score)[0];
-      if (found) { setComment(found); return; }
-    }
-
-    setComment(null);
-  };
-
   useEffect(() => {
-    const cached = sessionStorage.getItem('reddit_data_v6');
-    if (cached) { findComment(JSON.parse(cached)); return; }
+    const lower = playerName.toLowerCase();
+    const lastName = lower.split(' ').pop() ?? lower;
+    return subscribeReddit(data => {
+      const allComments: RedditComment[] = (data as RedditClientData & { allComments?: RedditComment[] }).allComments ?? [];
+      // Try direct player comment lookup first
+      const direct = data.playerComments[lower] ?? data.playerComments[lastName];
+      if (direct) { setComment(direct); return; }
+      // Fallback: search all comments for name mention
+      const found = allComments.find(c => {
+        const b = c.body.toLowerCase();
+        return b.includes(lower) || b.includes(lastName);
+      });
+      setComment(found ?? null);
+    });
   }, [playerName]);
 
-  useEffect(() => {
-    const handler = (e: CustomEvent<RedditClientData>) => findComment(e.detail);
-    window.addEventListener('reddit-data-ready', handler as EventListener);
-    return () => window.removeEventListener('reddit-data-ready', handler as EventListener);
-  }, [playerName]);
-
-  // Show nothing while loading or if no comment found
+  if (comment === undefined) return null; // loading
   if (!comment) return null;
 
   return (
@@ -174,20 +138,11 @@ export function PerformersSection({ headless, playerMeta = {} }: { headless?: bo
   const [performers, setPerformers] = useState<PerformerEntry[] | null>(null);
   const [fetchedAt, setFetchedAt] = useState<string>('');
 
-  const apply = (data: RedditClientData) => {
-    setPerformers(data.performers);
-    setFetchedAt(data.fetchedAt);
-  };
-
   useEffect(() => {
-    const cached = sessionStorage.getItem('reddit_data_v6');
-    if (cached) { apply(JSON.parse(cached)); return; }
-  }, []);
-
-  useEffect(() => {
-    const handler = (e: CustomEvent<RedditClientData>) => apply(e.detail);
-    window.addEventListener('reddit-data-ready', handler as EventListener);
-    return () => window.removeEventListener('reddit-data-ready', handler as EventListener);
+    return subscribeReddit(data => {
+      setPerformers(data.performers);
+      setFetchedAt(data.fetchedAt);
+    });
   }, []);
 
   return (
@@ -245,13 +200,13 @@ export function PerformersSection({ headless, playerMeta = {} }: { headless?: bo
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '6px' }}>
                     {meta?.photo && (
                       <div style={{ flexShrink: 0, width: '44px', height: '44px', borderRadius: '2px', overflow: 'hidden', border: '1px solid var(--gold-border)' }}>
-                        <img src={meta.photo} alt={p.name} width={44} height={44} style={{ objectFit: 'cover', objectPosition: 'top center', width: '100%', height: '100%' }} />
+                        <Image src={meta.photo} alt={p.name} width={44} height={44} style={{ objectFit: 'cover', objectPosition: 'top center', width: '100%', height: '100%' }} />
                       </div>
                     )}
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                         {meta?.teamLogo && (
-                          <img src={meta.teamLogo} alt="" width={16} height={16} style={{ objectFit: 'contain', flexShrink: 0 }} />
+                          <Image src={meta.teamLogo} alt="" width={16} height={16} style={{ objectFit: 'contain', flexShrink: 0 }} />
                         )}
                         <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.5rem', fontWeight: 400, margin: 0, color: 'var(--white)' }}>
                           {p.name}
@@ -283,17 +238,8 @@ export function PerformersSection({ headless, playerMeta = {} }: { headless?: bo
 export function FanVoiceSection({ headless }: { headless?: boolean } = {}) {
   const [data, setData] = useState<{ comments: RedditComment[]; threads: number; fetchedAt: string } | null>(null);
 
-  const apply = (d: RedditClientData) => setData({ comments: d.fanVoiceComments, threads: d.threads.length, fetchedAt: d.fetchedAt });
-
   useEffect(() => {
-    const cached = sessionStorage.getItem('reddit_data_v6');
-    if (cached) { apply(JSON.parse(cached)); return; }
-  }, []);
-
-  useEffect(() => {
-    const handler = (e: CustomEvent<RedditClientData>) => apply(e.detail);
-    window.addEventListener('reddit-data-ready', handler as EventListener);
-    return () => window.removeEventListener('reddit-data-ready', handler as EventListener);
+    return subscribeReddit(d => setData({ comments: d.fanVoiceComments, threads: d.threads.length, fetchedAt: d.fetchedAt }));
   }, []);
 
   return (
@@ -360,19 +306,85 @@ export function FanVoiceSection({ headless }: { headless?: boolean } = {}) {
   );
 }
 
-// ── Data loader — runs once, fires event, caches in sessionStorage ────────────
+// ── Tournament Favourites — cumulative all-time fan buzz ─────────────────────
+
+export function TournamentFavourites() {
+  const [favs, setFavs] = useState<PerformerEntry[] | null>(null);
+
+  useEffect(() => {
+    return subscribeReddit(data => setFavs(data.tournamentFavourites ?? []));
+  }, []);
+
+  if (!favs) return (
+    <div style={{ padding: '32px', textAlign: 'center' }}>
+      <Loading />
+    </div>
+  );
+
+  if (favs.length === 0) return (
+    <div style={{ padding: '32px', textAlign: 'center' }}>
+      <p style={{ color: 'var(--muted)', fontStyle: 'italic', margin: 0 }}>Fan verdict still forming.</p>
+    </div>
+  );
+
+  return (
+    <section>
+      <div className="mb-8">
+        <p className="label mb-3">Fan Verdict</p>
+        <h2 style={{ fontSize: '2.5rem', color: 'var(--white)' }}>Tournament Favourites</h2>
+        <div className="gold-line mt-4" />
+        <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '10px', fontStyle: 'italic' }}>
+          Who fans have talked about most across every thread this tournament
+        </p>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        {favs.map((p, i) => (
+          <div key={p.name} style={{
+            display: 'grid', gridTemplateColumns: '44px 1fr auto',
+            gap: '16px', alignItems: 'center',
+            padding: '16px 20px',
+            background: i < 3 ? 'var(--navy-2)' : 'transparent',
+            borderLeft: i === 0 ? '2px solid var(--gold)' : i < 3 ? '2px solid rgba(201,168,76,0.3)' : '2px solid transparent',
+            borderRadius: '1px',
+          }}>
+            <span style={{
+              fontFamily: 'Cormorant Garamond, serif', fontSize: '2rem', fontWeight: 300,
+              color: 'var(--gold)', opacity: i === 0 ? 0.7 : 0.3, lineHeight: 1,
+            }}>
+              {String(i + 1).padStart(2, '0')}
+            </span>
+            <div>
+              <div style={{
+                fontFamily: 'Cormorant Garamond, serif',
+                fontSize: '1.15rem', fontWeight: i < 3 ? 500 : 400,
+                color: i < 3 ? 'var(--white)' : 'rgba(255,255,255,0.7)',
+              }}>
+                {p.name}
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px', fontStyle: 'italic' }}>
+                &ldquo;{truncate(p.topComment.body, 120)}&rdquo;
+              </div>
+            </div>
+            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.4rem', color: 'var(--gold)', lineHeight: 1 }}>
+                {p.mentionCount}
+              </div>
+              <div style={{ fontSize: '9px', color: 'var(--muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '2px' }}>
+                mentions
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ── Loading banner (shown until data arrives) ─────────────────────────────────
 
 export function RedditLoadingBanner() {
   const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    const cached = sessionStorage.getItem('reddit_data_v6');
-    if (cached) { setReady(true); return; }
-    const handler = () => setReady(true);
-    window.addEventListener('reddit-data-ready', handler);
-    return () => window.removeEventListener('reddit-data-ready', handler);
-  }, []);
-
+  useEffect(() => subscribeReddit(() => setReady(true)), []);
   if (ready) return null;
   return (
     <div style={{
@@ -390,32 +402,17 @@ export function RedditLoadingBanner() {
   );
 }
 
+// ── Data loader — call once at app root to start the fetch ────────────────────
+
 export function RedditDataLoader({
   fixtures,
 }: {
   fixtures: Array<{ homeTeam: string; awayTeam: string; isFinished: boolean }>;
 }) {
   useEffect(() => {
-    const cached = sessionStorage.getItem('reddit_data_v6');
-    const cacheTime = sessionStorage.getItem('reddit_data_v6_time');
-    const THIRTY_MIN = 30 * 60 * 1000;
-
-    if (cached && cacheTime && Date.now() - parseInt(cacheTime) < THIRTY_MIN) {
-      const data = JSON.parse(cached);
-      window.dispatchEvent(new CustomEvent('reddit-data-ready', { detail: data }));
-      return;
-    }
-
-    fetchRedditData(fixtures).then(data => {
-      console.log('[Reddit] threads found:', data.threads.length, data.threads.map(t => t.title));
-      console.log('[Reddit] playerComments keys:', Object.keys(data.playerComments));
-      console.log('[Reddit] performers:', data.performers.map(p => p.name));
-      console.log('[Reddit] fanVoice count:', data.fanVoiceComments.length);
-      sessionStorage.setItem('reddit_data_v6', JSON.stringify(data));
-      sessionStorage.setItem('reddit_data_v6_time', Date.now().toString());
-      window.dispatchEvent(new CustomEvent('reddit-data-ready', { detail: data }));
-    });
+    initRedditStore(fixtures);
+  // fixtures is stable (server-rendered), intentionally omitting from deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
   return null;
 }

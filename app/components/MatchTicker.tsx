@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import Image from 'next/image';
 import type { ApiFixture } from '../lib/api';
 
 const FINISHED = new Set(['FT', 'AET', 'PEN']);
@@ -46,12 +47,16 @@ function dayLabel(dateStr: string) {
 }
 
 export default function MatchTicker({ fixtures }: { fixtures: ApiFixture[] }) {
+  const todayKey = useMemo(() => dateKey(new Date().toISOString()), []);
+
   const days = useMemo(() => {
     const map = new Map<string, ApiFixture[]>();
     for (const f of fixtures) {
       const s = f.fixture.status.short;
-      if (!FINISHED.has(s) && !LIVE.has(s)) continue;
       const key = dateKey(f.fixture.date);
+      // Show finished/live matches for any day, plus today's matches regardless of status
+      // (so today's slate appears even before kickoff)
+      if (!FINISHED.has(s) && !LIVE.has(s) && key !== todayKey) continue;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(f);
     }
@@ -62,9 +67,10 @@ export default function MatchTicker({ fixtures }: { fixtures: ApiFixture[] }) {
         label: dayLabel(matches[0].fixture.date),
         matches: matches.sort((a, b) => new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime()),
       }));
-  }, [fixtures]);
+  }, [fixtures, todayKey]);
 
-  const [dayIndex, setDayIndex] = useState(() => Math.max(0, days.length - 1));
+  const todayIndex = days.findIndex(d => d.key === todayKey);
+  const [dayIndex, setDayIndex] = useState(() => (todayIndex >= 0 ? todayIndex : Math.max(0, days.length - 1)));
 
   if (days.length === 0) return null;
 
@@ -107,31 +113,38 @@ export default function MatchTicker({ fixtures }: { fixtures: ApiFixture[] }) {
       }}>
         {current.matches.map(f => {
           const isLive = LIVE.has(f.fixture.status.short);
+          const notStarted = f.fixture.status.short === 'NS';
           const homeGoals = f.goals.home ?? 0;
           const awayGoals = f.goals.away ?? 0;
+          const kickoff = notStarted
+            ? new Date(f.fixture.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+            : null;
           return (
             <div key={f.fixture.id} style={{
               display: 'flex', alignItems: 'center', gap: '6px', padding: '0 10px',
               height: '100%', borderRight: '1px solid var(--gold-border)', flexShrink: 0,
             }}>
               {f.teams.home.logo && (
-                <img src={f.teams.home.logo} alt="" width={14} height={14} style={{ objectFit: 'contain', opacity: 0.85 }} />
+                <Image src={f.teams.home.logo} alt="" width={14} height={14} style={{ objectFit: 'contain', opacity: 0.85 }} />
               )}
               <span style={{ fontSize: '11px', color: 'var(--muted)', whiteSpace: 'nowrap', fontFamily: 'Inter, sans-serif', letterSpacing: '0.04em' }}>
                 {teamAbbr(f.teams.home.name)}
               </span>
               <span style={{
-                fontSize: '12px', fontFamily: 'Cormorant Garamond, serif', fontWeight: 500,
-                color: isLive ? '#4ade80' : 'var(--white)', letterSpacing: '0.05em',
-                minWidth: '28px', textAlign: 'center',
+                fontSize: notStarted ? '10px' : '12px',
+                fontFamily: notStarted ? 'Inter, sans-serif' : 'Cormorant Garamond, serif',
+                fontWeight: 500,
+                color: isLive ? '#4ade80' : notStarted ? 'var(--gold)' : 'var(--white)',
+                letterSpacing: '0.05em',
+                minWidth: '34px', textAlign: 'center', whiteSpace: 'nowrap',
               }}>
-                {homeGoals}–{awayGoals}
+                {notStarted ? kickoff : `${homeGoals}–${awayGoals}`}
               </span>
               <span style={{ fontSize: '11px', color: 'var(--muted)', whiteSpace: 'nowrap', fontFamily: 'Inter, sans-serif', letterSpacing: '0.04em' }}>
                 {teamAbbr(f.teams.away.name)}
               </span>
               {f.teams.away.logo && (
-                <img src={f.teams.away.logo} alt="" width={14} height={14} style={{ objectFit: 'contain', opacity: 0.85 }} />
+                <Image src={f.teams.away.logo} alt="" width={14} height={14} style={{ objectFit: 'contain', opacity: 0.85 }} />
               )}
               {isLive && (
                 <span style={{ fontSize: '8px', color: '#4ade80', letterSpacing: '0.1em' }}>

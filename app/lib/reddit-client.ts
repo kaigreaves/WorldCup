@@ -120,9 +120,10 @@ export interface RedditClientData {
   threads: RedditPost[];
   matchComments: Record<string, RedditComment[]>;
   playerComments: Record<string, RedditComment>;
-  performers: PerformerEntry[];
+  performers: PerformerEntry[];           // today's buzz (recent threads)
+  tournamentFavourites: PerformerEntry[]; // all-time mentions across whole tournament
   fanVoiceComments: RedditComment[];
-  allComments: RedditComment[];   // top 150 across all threads — for name-search fallback
+  allComments: RedditComment[];
   fetchedAt: string;
 }
 
@@ -321,8 +322,12 @@ export async function fetchRedditData(
 
     const seen2 = new Set<string>();
     const best: RedditComment[] = [];
-    for (const c of comments.filter(c => isSubstantive(c.body) && c.score >= 0)) {
-      if (best.length >= 3) break;
+    // Sort by score so best comments surface first
+    const sorted = comments
+      .filter(c => isSubstantive(c.body) && c.score >= -2)
+      .sort((a, b) => b.score - a.score);
+    for (const c of sorted) {
+      if (best.length >= 4) break;
       if (!seen2.has(c.author)) { seen2.add(c.author); best.push(c); }
     }
     if (best.length > 0) matchComments[key] = best;
@@ -354,6 +359,19 @@ export async function fetchRedditData(
     .sort((a, b) => b.weightedScore - a.weightedScore)
     .slice(0, 8);
 
+  // 5b. Tournament favourites — cumulative mentions across ALL threads (not just recent)
+  const allMentions = detectMentions(allComments.filter(c => isSubstantive(c.body)));
+  const tournamentFavourites: PerformerEntry[] = Array.from(allMentions.entries())
+    .filter(([, d]) => d.count >= 2)
+    .map(([name, d]) => ({
+      name,
+      mentionCount: d.count,
+      weightedScore: d.count * (d.totalScore / Math.max(1, d.count)),
+      topComment: d.topComment,
+    }))
+    .sort((a, b) => b.mentionCount - a.mentionCount)
+    .slice(0, 10);
+
   // 6. Fan voice — top varied comments
   const fanVoiceComments = allComments
     .filter(c => isSubstantive(c.body) && c.score >= 0 && c.body.length <= 600)
@@ -371,6 +389,7 @@ export async function fetchRedditData(
     matchComments,
     playerComments,
     performers,
+    tournamentFavourites,
     fanVoiceComments,
     allComments: allComments.filter(c => isSubstantive(c.body)).slice(0, 150),
     fetchedAt: new Date().toISOString(),

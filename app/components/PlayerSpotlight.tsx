@@ -1,6 +1,8 @@
+import Image from 'next/image';
 import type { ApiScorer, ApiFixture, SpotlightConfig } from '../lib/api';
 import { findSpotlightStats, getTeamFixtures } from '../lib/api';
 import { PlayerFanComment } from './RedditShell';
+import LeaderboardLink from './LeaderboardLink';
 
 interface Props {
   players: SpotlightConfig[];
@@ -48,7 +50,7 @@ function SpotlightCard({ player, scorers, assists, fixtures }: {
           {/* Headshot */}
           {player.playerPhoto && (
             <div style={{ flexShrink: 0, width: '56px', height: '56px', borderRadius: '2px', overflow: 'hidden', border: '1px solid var(--gold-border)' }}>
-              <img
+              <Image
                 src={player.playerPhoto}
                 alt={player.fullName}
                 width={56}
@@ -60,7 +62,7 @@ function SpotlightCard({ player, scorers, assists, fixtures }: {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '4px' }}>
               {player.teamLogo && (
-                <img src={player.teamLogo} alt={player.teamName} width={16} height={16} style={{ objectFit: 'contain', flexShrink: 0 }} />
+                <Image src={player.teamLogo} alt={player.teamName} width={16} height={16} style={{ objectFit: 'contain', flexShrink: 0 }} />
               )}
               <p style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--gold)', margin: 0 }}>
                 {player.teamTla} · {player.role}
@@ -95,6 +97,12 @@ function SpotlightCard({ player, scorers, assists, fixtures }: {
           </p>
           <PlayerFanComment playerName={player.fullName} />
         </div>
+
+        {!/mbapp|messi/i.test(player.fullName) && (
+          <LeaderboardLink style={{ marginBottom: '4px' }}>
+            See where {player.fullName.split(' ').pop()} ranks →
+          </LeaderboardLink>
+        )}
 
         {teamFixtures.length > 0 && (
           <div style={{ borderTop: '1px solid var(--gold-border)', paddingTop: '16px' }}>
