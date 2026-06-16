@@ -77,6 +77,21 @@ export async function getTopAssists(): Promise<ApiScorer[] | null> {
   return apiFetch<ApiScorer[]>(`/players/topassists?league=${LEAGUE}&season=${SEASON}`);
 }
 
+export interface StandingEntry {
+  rank: number;
+  team: { id: number; name: string; logo: string };
+  points: number;
+  goalsDiff: number;
+  group: string;
+  all: { played: number; win: number; draw: number; lose: number };
+}
+
+export async function getStandings(): Promise<StandingEntry[][]> {
+  interface RawStandings { league: { standings: StandingEntry[][] } }
+  const res = await apiFetch<RawStandings[]>(`/standings?league=${LEAGUE}&season=${SEASON}`);
+  return res?.[0]?.league?.standings ?? [];
+}
+
 export async function searchPlayer(name: string): Promise<ApiScorer | null> {
   const results = await apiFetch<ApiScorer[]>(`/players?search=${encodeURIComponent(name)}&league=${LEAGUE}&season=${SEASON}`);
   return results?.[0] ?? null;

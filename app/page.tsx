@@ -2,6 +2,7 @@ import {
   getFixtures,
   getTopScorers,
   getTopAssists,
+  getStandings,
   computeGreatness,
   buildStorylines,
   buildSpotlightPlayers,
@@ -13,17 +14,20 @@ import {
 } from './lib/api';
 import Storylines from './components/Storylines';
 import GreatnessLeaderboard from './components/GreatnesLeaderboard';
+import GroupStandings from './components/GroupStandings';
 import Matches from './components/Matches';
 import PlayerSpotlight from './components/PlayerSpotlight';
 import SectionPanel from './components/SectionPanel';
 import MatchTicker from './components/MatchTicker';
+import RecapBanner from './components/RecapBanner';
 import { RedditDataLoader, PerformersSection, FanVoiceSection } from './components/RedditShell';
 
 export default async function Page() {
-  const [fixtures, scorers, assists] = await Promise.all([
+  const [fixtures, scorers, assists, standings] = await Promise.all([
     getFixtures(),
     getTopScorers(),
     getTopAssists(),
+    getStandings(),
   ]);
 
   const allFixtures = fixtures ?? [];
@@ -100,6 +104,7 @@ export default async function Page() {
           </span>
         </div>
         <GreatnessLeaderboard entries={greatnessEntries} compact />
+        <GroupStandings groups={standings} />
       </aside>
 
       {/* Main content — padded right to clear the fixed sidebar */}
@@ -154,6 +159,9 @@ export default async function Page() {
 
         {/* Score ticker */}
         <MatchTicker fixtures={allFixtures} />
+
+        {/* Recap banner — shown if matches finished since last visit */}
+        <RecapBanner fixtures={allFixtures} />
 
         {/* Hero */}
         <div style={{
