@@ -5,15 +5,41 @@ const SEASON = 2026;
 
 const headers = { 'x-apisports-key': KEY };
 
+function hasApiError(errors: unknown): boolean {
+  // api-sports returns HTTP 200 even when rate-limited — the only signal is a
+  // non-empty `errors` field (an empty array `[]` on success, an object with
+  // keys like `rateLimit` on failure). Treating a 200 as automatically valid
+  // silently accepts rate-limited responses as if they were real empty data.
+  if (!errors) return false;
+  return Array.isArray(errors) ? errors.length > 0 : Object.keys(errors).length > 0;
+}
+
 async function apiFetch<T>(path: string, revalidate = 300): Promise<T | null> {
-  try {
-    const res = await fetch(`${BASE}${path}`, { headers, next: { revalidate } });
-    if (!res.ok) return null;
-    const json = await res.json() as { response: T };
-    return json.response;
-  } catch {
-    return null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      // Retry uses a cache-busting header (not a query param — api-sports
+      // rejects any unrecognized query param outright, and not `cache: 'no-store'`,
+      // since a `no-store` fetch anywhere in a route forces the *entire* page to
+      // render dynamically on every request, killing 5-minute ISR for everything
+      // else on the page, not just this one call).
+      const reqHeaders = attempt === 0 ? headers : { ...headers, 'X-Retry-Attempt': String(Date.now()) };
+      const res = await fetch(`${BASE}${path}`, { headers: reqHeaders, next: { revalidate } });
+      if (!res.ok) return null;
+      const json = await res.json() as { response: T; errors?: unknown };
+      if (hasApiError(json.errors)) {
+        if (attempt === 0) {
+          await new Promise(r => setTimeout(r, 1000 + Math.random() * 500));
+          continue;
+        }
+        return null;
+      }
+      return json.response;
+    } catch {
+      if (attempt === 0) continue;
+      return null;
+    }
   }
+  return null;
 }
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -66,7 +92,7 @@ export interface ApiFixture {
 // ── Fetchers ─────────────────────────────────────────────────────────────────
 
 export async function getFixtures(): Promise<ApiFixture[] | null> {
-  return apiFetch<ApiFixture[]>(`/fixtures?league=${LEAGUE}&season=${SEASON}`);
+  return apiFetch<ApiFixture[]>(`/fixtures?league=${LEAGUE}&season=${SEASON}`, 60);
 }
 
 export async function getTopScorers(): Promise<ApiScorer[] | null> {
@@ -745,11 +771,29 @@ export async function computeLegacyLeaderboard(
     if (st) teamLogoMap[st.team.name] = st.team.logo;
   }
 
-  // Fetch events + player stats for all finished fixtures in parallel (24h cache)
-  const [allEvents, allPlayerStats] = await Promise.all([
-    Promise.all(finishedFixtures.map(f => getFixtureEvents(f.fixture.id))),
-    Promise.all(finishedFixtures.map(f => getFixturePlayerStats(f.fixture.id))),
-  ]);
+  // Fetch events + player stats for all finished fixtures (24h cache).
+  // Batched in small groups instead of firing every request at once — api-sports
+  // enforces a per-minute rate limit well below what a 16-fixture × 2-endpoint
+  // burst needs, and silently rejecting most of them is what caused real
+  // goals/assists to disappear from the leaderboard.
+  // Small batch size — the observed failure looks like a concurrent-in-flight-
+  // requests cap rather than a per-minute quota (the per-minute budget has
+  // plenty of headroom even when bursts fail), so keep simultaneous requests low.
+  const BATCH_SIZE = 2;
+  const allEvents: RawEvent[][] = [];
+  const allPlayerStats: RawFixturePlayer[][] = [];
+  for (let i = 0; i < finishedFixtures.length; i += BATCH_SIZE) {
+    const batch = finishedFixtures.slice(i, i + BATCH_SIZE);
+    const [eventsBatch, playerStatsBatch] = await Promise.all([
+      Promise.all(batch.map(f => getFixtureEvents(f.fixture.id))),
+      Promise.all(batch.map(f => getFixturePlayerStats(f.fixture.id))),
+    ]);
+    allEvents.push(...eventsBatch);
+    allPlayerStats.push(...playerStatsBatch);
+    if (i + BATCH_SIZE < finishedFixtures.length) {
+      await new Promise(r => setTimeout(r, 700));
+    }
+  }
 
   // ── Per-player accumulators ───────────────────────────────────────────────
 

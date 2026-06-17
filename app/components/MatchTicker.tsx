@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import type { ApiFixture } from '../lib/api';
 
@@ -47,7 +48,16 @@ function dayLabel(dateStr: string) {
 }
 
 export default function MatchTicker({ fixtures }: { fixtures: ApiFixture[] }) {
+  const router = useRouter();
   const todayKey = useMemo(() => dateKey(new Date().toISOString()), []);
+
+  const hasLive = useMemo(() => fixtures.some(f => LIVE.has(f.fixture.status.short)), [fixtures]);
+
+  useEffect(() => {
+    if (!hasLive) return;
+    const interval = setInterval(() => router.refresh(), 60_000);
+    return () => clearInterval(interval);
+  }, [hasLive, router]);
 
   const days = useMemo(() => {
     const map = new Map<string, ApiFixture[]>();
