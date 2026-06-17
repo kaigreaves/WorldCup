@@ -28,9 +28,9 @@ export default function GroupStandings({ groups }: Props) {
           <button
             key={i}
             onClick={() => setActiveIdx(i)}
+            className="group-tab-btn"
             style={{
-              padding: '3px 7px', fontSize: '9px', letterSpacing: '0.1em',
-              fontFamily: 'Inter, sans-serif',
+              fontFamily: 'Inter, sans-serif', letterSpacing: '0.1em',
               background: i === activeIdx ? 'var(--gold)' : 'transparent',
               color: i === activeIdx ? 'var(--navy)' : 'var(--muted)',
               border: '1px solid', borderColor: i === activeIdx ? 'var(--gold)' : 'var(--gold-border)',

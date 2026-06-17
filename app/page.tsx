@@ -163,36 +163,8 @@ export default async function Page() {
         <SectionPanel>
           {[
             /* ── Legacy tab ─────────────────────────────────────── */
-            <div key="legacy" style={{ position: 'relative', overflow: 'hidden' }}>
-              {/* Mbappé as subtle background */}
-              <Image
-                src="/Mbappe-hero.jpg"
-                alt=""
-                aria-hidden="true"
-                width={3538}
-                height={2359}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  right: -80,
-                  height: '100%',
-                  width: 'auto',
-                  objectFit: 'cover',
-                  objectPosition: 'center top',
-                  opacity: 0.07,
-                  pointerEvents: 'none',
-                  userSelect: 'none',
-                }}
-              />
-              <div style={{
-                position: 'absolute',
-                inset: 0,
-                background: 'linear-gradient(to right, var(--navy) 45%, rgba(0,17,43,0.7) 100%)',
-                pointerEvents: 'none',
-              }} />
-              <div style={{ position: 'relative', zIndex: 1, padding: '32px clamp(16px, 4vw, 40px) 40px' }}>
-                <GreatnessLeaderboard entries={legacyEntries} />
-              </div>
+            <div key="legacy" style={{ padding: '32px clamp(16px, 4vw, 40px) 40px' }}>
+              <GreatnessLeaderboard entries={legacyEntries} />
             </div>,
 
             /* ── Matches tab ────────────────────────────────────── */
