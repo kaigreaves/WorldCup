@@ -165,10 +165,9 @@ nav a:hover { color: var(--gold) !important; }
 
 /* ── Fixed sidebar ────────────────────────────────────────────────────────── */
 
-.main-wrapper { margin-right: 288px; }
+.main-wrapper { margin-right: 248px; }
 
-.mobile-leaderboard { display: none; }
-.rankings-tab       { display: none; }
+.mobile-standings { display: none; }
 
 /* ── Bottom nav (mobile) ─────────────────────────────────────────────────── */
 
@@ -211,20 +210,40 @@ nav a:hover { color: var(--gold) !important; }
   font-weight: 500;
 }
 
+/* ── Group standings tab buttons ─────────────────────────────────────────── */
+
+.group-tab-btn {
+  padding: 3px 7px;
+  font-size: 9px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 899px) {
+  .group-tab-btn {
+    padding: 9px 14px;
+    font-size: 12px;
+    min-height: 38px;
+  }
+}
+
 /* ── Responsive breakpoint ────────────────────────────────────────────────── */
 
 @media (max-width: 899px) {
   #leaderboard       { display: none !important; }
   .main-wrapper      { margin-right: 0; }
-  .mobile-leaderboard {
+  .mobile-standings {
     display: block;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
     border-bottom: 1px solid var(--gold-border);
-    background: var(--navy);
   }
-  .rankings-tab {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  /* Standings now leads the Matches tab — drop its own top divider/spacing
+     (designed for when it sat below the match list) so it doesn't leave an
+     odd gap before any content. */
+  .mobile-standings > div {
+    margin-top: 0 !important;
+    border-top: none !important;
+    padding-top: 0 !important;
   }
   main { padding-top: 24px !important; }
 }

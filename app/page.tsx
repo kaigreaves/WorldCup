@@ -3,10 +3,7 @@ import {
   getTopScorers,
   getTopAssists,
   getStandings,
-  computeGreatness,
   computeLegacyLeaderboard,
-  buildStorylines,
-  buildSpotlightPlayers,
   buildTeamFlagMap,
   buildTeamRankMap,
   PLAYER_TEAM_MAP,
@@ -15,11 +12,9 @@ import {
   getLiveFixtures,
 } from './lib/api';
 import Image from 'next/image';
-import Storylines from './components/Storylines';
 import GreatnessLeaderboard from './components/GreatnesLeaderboard';
 import GroupStandings from './components/GroupStandings';
 import Matches from './components/Matches';
-import PlayerSpotlight from './components/PlayerSpotlight';
 import SectionPanel from './components/SectionPanel';
 import MatchTicker from './components/MatchTicker';
 import RecapBanner from './components/RecapBanner';
@@ -38,10 +33,7 @@ export default async function Page() {
   const allScorers = scorers ?? [];
   const allAssists = assists ?? [];
 
-  const greatnessEntries = computeGreatness(allScorers, allAssists);
   const legacyEntries = await computeLegacyLeaderboard(allFixtures, allScorers, allAssists, standings);
-  const storylines = buildStorylines(legacyEntries);
-  const spotlightPlayers = buildSpotlightPlayers(greatnessEntries, allScorers, allAssists);
 
   // Name → { photo, teamLogo } lookup for client components (Performers)
   const teamFlagMap = buildTeamFlagMap(allFixtures);
@@ -82,22 +74,21 @@ export default async function Page() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--navy)' }}>
 
-      {/* Fixed right sidebar — always visible on desktop */}
+      {/* Fixed right sidebar — group standings only on desktop */}
       <aside id="leaderboard" style={{
         position: 'fixed',
         top: 0,
         right: 0,
-        width: '280px',
+        width: '240px',
         height: '100vh',
         borderLeft: '1px solid var(--gold-border)',
         background: 'var(--navy)',
         overflowY: 'auto',
         zIndex: 50,
-        padding: '24px 20px 80px',
+        padding: '24px 16px 80px',
         boxSizing: 'border-box',
       } as React.CSSProperties}>
-        {/* WC 2026 badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', opacity: 0.6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', opacity: 0.6 }}>
           <Image
             src="https://media.api-sports.io/football/leagues/1.png"
             alt="FIFA World Cup 2026"
@@ -109,7 +100,6 @@ export default async function Page() {
             FIFA World Cup 2026
           </span>
         </div>
-        <GreatnessLeaderboard entries={legacyEntries} compact />
         <GroupStandings groups={standings} />
       </aside>
 
@@ -170,11 +160,6 @@ export default async function Page() {
 
         {/* Recap banner — shown if matches finished since last visit */}
         <RecapBanner fixtures={allFixtures} />
-
-        {/* Mobile leaderboard — first thing seen on phone, hero stays right below */}
-        <div className="mobile-leaderboard" id="mobile-rankings" style={{ padding: '20px 20px 8px' }}>
-          <GreatnessLeaderboard entries={legacyEntries} compact />
-        </div>
 
         {/* Hero */}
         <div style={{
@@ -268,21 +253,27 @@ export default async function Page() {
         <main style={{ padding: '40px clamp(16px, 4vw, 40px) 56px', maxWidth: '900px' }}>
           <RedditDataLoader fixtures={fixturesForReddit} />
 
+          {/* Legacy Leaderboard — the centerpiece */}
+          <div style={{ marginBottom: '56px' }}>
+            <GreatnessLeaderboard entries={legacyEntries} />
+          </div>
+
+          {/* Mobile group standings */}
+          <div className="mobile-standings" style={{ marginBottom: '40px' }}>
+            <GroupStandings groups={standings} />
+          </div>
+
           <SectionPanel>
             {[
-              <Storylines key="story" storylines={storylines} />,
-              <Matches key="matches" upcoming={upcomingMatches} finished={finishedMatches} live={liveMatches} teamRanks={teamRanks} />,
-              <div key="performers" id="performers"><PerformersSection headless playerMeta={playerMeta} /></div>,
+              <div key="matches">
+                <Matches upcoming={upcomingMatches} finished={finishedMatches} live={liveMatches} teamRanks={teamRanks} />
+              </div>,
+              <div key="performers" id="performers">
+                <PerformersSection headless playerMeta={playerMeta} />
+                <div className="gold-line" style={{ margin: '40px 0' }} />
+                <TournamentFavourites />
+              </div>,
               <FanVoiceSection key="fanvoice" headless />,
-              <TournamentFavourites key="favourites" />,
-              <PlayerSpotlight
-                key="spotlight"
-                players={spotlightPlayers}
-                scorers={allScorers}
-                assists={allAssists}
-                fixtures={allFixtures}
-                headless
-              />,
             ]}
           </SectionPanel>
         </main>

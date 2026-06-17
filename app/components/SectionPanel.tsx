@@ -2,7 +2,7 @@
 
 import { useState, Children } from 'react';
 
-const TABS = ['Story', 'Matches', 'Performers', 'Fan Voice', 'Favs', 'Spotlight'];
+const TABS = ['Matches', 'Performers', 'Fan Voice'];
 
 export default function SectionPanel({ children }: { children: React.ReactNode }) {
   const [active, setActive] = useState(0);
@@ -18,11 +18,6 @@ export default function SectionPanel({ children }: { children: React.ReactNode }
     setTimeout(() => {
       document.getElementById('section-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 10);
-  }
-
-  function scrollToRankings() {
-    const target = document.getElementById('mobile-rankings') ?? document.getElementById('leaderboard');
-    target?.scrollIntoView({ behavior: 'smooth' });
   }
 
   return (
@@ -51,10 +46,6 @@ export default function SectionPanel({ children }: { children: React.ReactNode }
 
       {/* ── Mobile fixed bottom nav ────────────────────────────────────────── */}
       <nav className="bottom-nav">
-        <button onClick={scrollToRankings} className="bottom-nav-btn rankings-tab"
-          style={{ borderTopColor: 'var(--gold)', color: 'var(--gold)' }}>
-          Rankings
-        </button>
         {TABS.map((tab, i) => (
           <button key={tab} onClick={() => go(i)}
             className={`bottom-nav-btn${active === i ? ' active' : ''}`}>
