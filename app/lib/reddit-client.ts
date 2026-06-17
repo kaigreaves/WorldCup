@@ -180,8 +180,8 @@ async function arcticGet<T>(url: string): Promise<T | null> {
   }
 }
 
-async function searchPosts(query: string, subreddit: string): Promise<RedditPost[]> {
-  const url = `${ARCTIC}/posts/search?subreddit=${subreddit}&title=${encodeURIComponent(query)}&limit=10`;
+async function searchPosts(query: string, subreddit: string, limit = 25): Promise<RedditPost[]> {
+  const url = `${ARCTIC}/posts/search?subreddit=${subreddit}&title=${encodeURIComponent(query)}&limit=${limit}`;
   const data = await arcticGet<{ data: ArcticPost[] }>(url);
   return (data?.data ?? []).map(p => ({
     id: p.id,
@@ -285,14 +285,24 @@ export async function fetchRedditData(
   }));
 
   threads.sort((a, b) => b.created_utc - a.created_utc);
+  // Top 10 most recent: used for match context, performers, fan voice
   const topThreads = threads.slice(0, 10);
+  // All threads: used for cumulative tournament-wide mention totals
+  const allThreads = threads;
 
-  // 2. Fetch comments from all threads in parallel
-  const threadComments = await Promise.all(
+  // 2a. Fetch full comments for the 10 most recent threads
+  const topComments = await Promise.all(
     topThreads.map(t => fetchComments(t.id, t.subreddit, t.title))
   );
-  const commentsByThread = new Map(topThreads.map((t, i) => [t.id, threadComments[i]]));
-  const allComments = threadComments.flat();
+  const commentsByThread = new Map(topThreads.map((t, i) => [t.id, topComments[i]]));
+  const allComments = topComments.flat();
+
+  // 2b. Fetch comments for older threads (not in top 10) for tournament totals
+  const olderThreads = allThreads.slice(10);
+  const olderComments = olderThreads.length > 0
+    ? (await Promise.all(olderThreads.map(t => fetchComments(t.id, t.subreddit, t.title)))).flat()
+    : [];
+  const tournamentComments = [...allComments, ...olderComments];
 
   // 3. Match comments to fixtures
   const matchComments: Record<string, RedditComment[]> = {};
@@ -359,8 +369,8 @@ export async function fetchRedditData(
     .sort((a, b) => b.weightedScore - a.weightedScore)
     .slice(0, 8);
 
-  // 5b. Tournament favourites — cumulative mentions across ALL threads (not just recent)
-  const allMentions = detectMentions(allComments.filter(c => isSubstantive(c.body)));
+  // 5b. Tournament favourites — cumulative mentions across ALL tournament threads
+  const allMentions = detectMentions(tournamentComments.filter(c => isSubstantive(c.body)));
   const tournamentFavourites: PerformerEntry[] = Array.from(allMentions.entries())
     .filter(([, d]) => d.count >= 2)
     .map(([name, d]) => ({

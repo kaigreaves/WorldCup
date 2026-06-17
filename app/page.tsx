@@ -208,7 +208,7 @@ export default async function Page() {
               <div style={{ marginBottom: '32px' }}>
                 <p className="label" style={{ marginBottom: '6px' }}>Fan Pulse</p>
                 <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '2rem', color: 'var(--white)', margin: '0 0 10px 0', fontWeight: 300 }}>
-                  What&apos;s Buzzing
+                  Who&apos;s Buzzing?
                 </h2>
                 <div className="gold-line" />
               </div>
