@@ -180,7 +180,7 @@ async function arcticGet<T>(url: string): Promise<T | null> {
   }
 }
 
-async function searchPosts(query: string, subreddit: string, limit = 25): Promise<RedditPost[]> {
+async function searchPosts(query: string, subreddit: string, limit = 100): Promise<RedditPost[]> {
   const url = `${ARCTIC}/posts/search?subreddit=${subreddit}&title=${encodeURIComponent(query)}&limit=${limit}`;
   const data = await arcticGet<{ data: ArcticPost[] }>(url);
   return (data?.data ?? []).map(p => ({
@@ -194,8 +194,8 @@ async function searchPosts(query: string, subreddit: string, limit = 25): Promis
   }));
 }
 
-async function fetchComments(postId: string, _subreddit: string, threadTitle: string): Promise<RedditComment[]> {
-  const url = `${ARCTIC}/comments/search?link_id=t3_${postId}&limit=100`;
+async function fetchComments(postId: string, _subreddit: string, threadTitle: string, limit = 100): Promise<RedditComment[]> {
+  const url = `${ARCTIC}/comments/search?link_id=t3_${postId}&limit=${limit}`;
   const data = await arcticGet<{ data: ArcticComment[] }>(url);
   return (data?.data ?? [])
     .map(c => ({ id: c.id, body: c.body, score: c.score ?? 0, author: c.author, thread_title: threadTitle }))
@@ -297,10 +297,11 @@ export async function fetchRedditData(
   const commentsByThread = new Map(topThreads.map((t, i) => [t.id, topComments[i]]));
   const allComments = topComments.flat();
 
-  // 2b. Fetch comments for older threads (not in top 10) for tournament totals
+  // 2b. Fetch comments for older threads (not in top 10) for tournament totals.
+  // Use 30 comments per thread — enough for mention detection without hammering the API.
   const olderThreads = allThreads.slice(10);
   const olderComments = olderThreads.length > 0
-    ? (await Promise.all(olderThreads.map(t => fetchComments(t.id, t.subreddit, t.title)))).flat()
+    ? (await Promise.all(olderThreads.map(t => fetchComments(t.id, t.subreddit, t.title, 30)))).flat()
     : [];
   const tournamentComments = [...allComments, ...olderComments];
 
