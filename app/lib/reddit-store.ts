@@ -8,8 +8,8 @@
 import { fetchRedditData } from './reddit-client';
 import type { RedditClientData } from './reddit-client';
 
-const CACHE_KEY = 'reddit_data_v8';
-const CACHE_TIME_KEY = 'reddit_data_v8_time';
+const CACHE_KEY = 'reddit_data_v9';
+const CACHE_TIME_KEY = 'reddit_data_v9_time';
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 type Subscriber = (data: RedditClientData) => void;
@@ -78,7 +78,7 @@ export function initRedditStore(
   // Try memory-missed but sessionStorage-hit (e.g. after HMR)
   const cached = readCache();
   if (cached) {
-    _data = cached;
+    notify(cached);
     return;
   }
 
