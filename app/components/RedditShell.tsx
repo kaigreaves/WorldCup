@@ -129,10 +129,7 @@ export function PlayerFanComment({ playerName }: { playerName: string }) {
 
 // ── Performers section ────────────────────────────────────────────────────────
 
-const ACCOLADES = [
-  'The Talk of the Tournament', "Everyone's Watching", "Name on Everyone's Lips",
-  'Unavoidable', 'Making Noise', 'Rising', 'In Focus', 'Catching Eyes',
-];
+// Labels for performer cards: first is featured, rest show "Buzzing"
 
 export function PerformersSection({ headless, playerMeta = {} }: { headless?: boolean; playerMeta?: Record<string, { photo?: string; teamLogo?: string }> } = {}) {
   const [performers, setPerformers] = useState<PerformerEntry[] | null>(null);
@@ -191,7 +188,7 @@ export function PerformersSection({ headless, playerMeta = {} }: { headless?: bo
                 <div style={{ paddingLeft: isStar ? '0' : '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                     <p style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--gold)', margin: 0, fontWeight: isStar ? 600 : 400 }}>
-                      {isStar ? 'Performer of the Day' : (ACCOLADES[i] ?? 'Standout')}
+                      {isStar ? 'Talk of the Town' : 'Buzzing'}
                     </p>
                     <span style={{ fontSize: '10px', color: buzzColor, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                       {buzz} buzz

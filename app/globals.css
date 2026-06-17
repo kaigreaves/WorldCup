@@ -163,10 +163,6 @@ nav a:hover { color: var(--gold) !important; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--gold-border); border-radius: 99px; }
 
-/* ── Fixed sidebar ────────────────────────────────────────────────────────── */
-
-.main-wrapper { margin-right: 248px; }
-
 .mobile-standings { display: none; }
 
 /* ── Bottom nav (mobile) ─────────────────────────────────────────────────── */
@@ -229,23 +225,7 @@ nav a:hover { color: var(--gold) !important; }
 /* ── Responsive breakpoint ────────────────────────────────────────────────── */
 
 @media (max-width: 899px) {
-  #leaderboard       { display: none !important; }
-  .main-wrapper      { margin-right: 0; }
-  .mobile-standings {
-    display: block;
-    margin-bottom: 32px;
-    padding-bottom: 24px;
-    border-bottom: 1px solid var(--gold-border);
-  }
-  /* Standings now leads the Matches tab — drop its own top divider/spacing
-     (designed for when it sat below the match list) so it doesn't leave an
-     odd gap before any content. */
-  .mobile-standings > div {
-    margin-top: 0 !important;
-    border-top: none !important;
-    padding-top: 0 !important;
-  }
-  main { padding-top: 24px !important; }
+  main { padding-top: 0 !important; }
 }
 
 @media (min-width: 900px) {
@@ -315,14 +295,6 @@ nav a:hover { color: var(--gold) !important; }
 }
 
 .leaderboard-link:hover { opacity: 1; }
-
-/* ── Desktop sidebar glass ────────────────────────────────────────────────── */
-
-#leaderboard {
-  background: var(--glass-bg) !important;
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-}
 
 /* ── Header glass ─────────────────────────────────────────────────────────── */
 

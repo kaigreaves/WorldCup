@@ -2,7 +2,7 @@
 
 import { useState, Children } from 'react';
 
-const TABS = ['Matches', 'Performers', 'Fan Voice'];
+const TABS = ['Legacy', 'Matches', 'Buzzing'];
 
 export default function SectionPanel({ children }: { children: React.ReactNode }) {
   const [active, setActive] = useState(0);

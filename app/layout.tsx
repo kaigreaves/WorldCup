@@ -1,9 +1,23 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "The Story of Greatness — FIFA World Cup 2026",
-  description: "Follow the tournament through the lens of greatness. Legacy scores, match narratives, and performer spotlights.",
+  title: "Legacy Tracker — FIFA World Cup 2026",
+  description: "The legacy leaderboard for FIFA World Cup 2026. Who's delivering when it counts.",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+  },
+  other: {
+    "apple-mobile-web-app-capable": "yes",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#00112B",
 };
 
 export default function RootLayout({

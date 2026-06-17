@@ -18,7 +18,6 @@ import Matches from './components/Matches';
 import SectionPanel from './components/SectionPanel';
 import MatchTicker from './components/MatchTicker';
 import RecapBanner from './components/RecapBanner';
-import HeroCTA from './components/HeroCTA';
 import { RedditDataLoader, PerformersSection, FanVoiceSection, TournamentFavourites } from './components/RedditShell';
 
 export default async function Page() {
@@ -35,18 +34,15 @@ export default async function Page() {
 
   const legacyEntries = await computeLegacyLeaderboard(allFixtures, allScorers, allAssists, standings);
 
-  // Name → { photo, teamLogo } lookup for client components (Performers)
   const teamFlagMap = buildTeamFlagMap(allFixtures);
   const teamRanks = buildTeamRankMap(standings);
   const playerMeta: Record<string, { photo?: string; teamLogo?: string }> = {};
 
-  // Seed from static player→team map so performers get flags even without scorer data
   for (const [playerKey, teamName] of Object.entries(PLAYER_TEAM_MAP)) {
     const teamLogo = teamFlagMap[teamName];
     if (teamLogo) playerMeta[playerKey] = { teamLogo };
   }
 
-  // Override/enrich with live API data (adds player photos where available)
   for (const s of [...allScorers, ...allAssists]) {
     const lastName = s.player.name.split(' ').pop()?.toLowerCase() ?? '';
     const fullLower = s.player.name.toLowerCase();
@@ -54,6 +50,7 @@ export default async function Page() {
     if (lastName) playerMeta[lastName] = { ...playerMeta[lastName], ...meta };
     playerMeta[fullLower] = { ...playerMeta[fullLower], ...meta };
   }
+
   const upcomingMatches = getUpcomingFixtures(allFixtures);
   const finishedMatches = getFinishedFixtures(allFixtures);
   const liveMatches = getLiveFixtures(allFixtures);
@@ -74,229 +71,175 @@ export default async function Page() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--navy)' }}>
 
-      {/* Fixed right sidebar — group standings only on desktop */}
-      <aside id="leaderboard" style={{
-        position: 'fixed',
+      {/* Header */}
+      <header style={{
+        borderBottom: '1px solid var(--gold-border)',
+        padding: '0 clamp(20px, 4vw, 40px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        height: '56px',
+        position: 'sticky',
         top: 0,
-        right: 0,
-        width: '240px',
-        height: '100vh',
-        borderLeft: '1px solid var(--gold-border)',
-        background: 'var(--navy)',
-        overflowY: 'auto',
-        zIndex: 50,
-        padding: '24px 16px 80px',
-        boxSizing: 'border-box',
-      } as React.CSSProperties}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', opacity: 0.6 }}>
+        zIndex: 100,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Image
             src="https://media.api-sports.io/football/leagues/1.png"
             alt="FIFA World Cup 2026"
-            width={22}
-            height={22}
-            style={{ objectFit: 'contain' }}
+            width={28}
+            height={28}
+            style={{ height: '28px', width: 'auto', objectFit: 'contain' }}
           />
-          <span style={{ fontSize: '8px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--gold)', fontFamily: 'Inter, sans-serif' }}>
-            FIFA World Cup 2026
-          </span>
-        </div>
-        <GroupStandings groups={standings} />
-      </aside>
-
-      {/* Main content — padded right to clear the fixed sidebar on desktop */}
-      <div className="main-wrapper">
-
-        {/* Header */}
-        <header style={{
-          borderBottom: '1px solid var(--gold-border)',
-          padding: '0 clamp(20px, 4vw, 40px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          height: '64px',
-          position: 'sticky',
-          top: 0,
-          background: 'var(--navy)',
-          zIndex: 100,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <Image
-              src="https://media.api-sports.io/football/leagues/1.png"
-              alt="FIFA World Cup 2026"
-              width={144}
-              height={144}
-              style={{ height: '36px', width: 'auto', objectFit: 'contain', display: 'block' }}
-            />
-            <div style={{
-              width: '1px',
-              height: '28px',
-              background: 'var(--gold-border)',
-            }} />
-            <div style={{
-              fontFamily: 'Cormorant Garamond, serif',
-              fontSize: '0.95rem',
-              fontWeight: 500,
-              letterSpacing: '0.1em',
-              color: 'var(--white)',
-              textTransform: 'uppercase',
-            }}>
-              The Story of Greatness
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            {isLive && (
-              <span style={{ fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ade80', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
-                Live
-              </span>
-            )}
-            <span style={{ fontSize: '11px', color: 'var(--muted)', letterSpacing: '0.03em' }}>{today}</span>
-          </div>
-        </header>
-
-
-        {/* Score ticker */}
-        <MatchTicker fixtures={allFixtures} />
-
-        {/* Recap banner — shown if matches finished since last visit */}
-        <RecapBanner fixtures={allFixtures} />
-
-        {/* Hero */}
-        <div style={{
-          position: 'relative',
-          borderBottom: '1px solid var(--gold-border)',
-          overflow: 'hidden',
-          minHeight: '420px',
-          display: 'flex',
-          alignItems: 'center',
-        }}>
-          {/* Mbappé background photo — right-aligned, no distortion */}
-          <Image
-            src="/Mbappe-hero.jpg"
-            alt=""
-            aria-hidden="true"
-            width={3538}
-            height={2359}
-            priority
-            style={{
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              height: '100%',
-              width: 'auto',
-              objectFit: 'cover',
-              objectPosition: 'center top',
-              display: 'block',
-              zIndex: 0,
-            }}
-          />
-          {/* Dark gradient left-to-right so text stays readable */}
           <div style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'linear-gradient(to right, var(--navy) 40%, rgba(0,17,43,0.85) 65%, rgba(0,17,43,0.2) 100%)',
-            zIndex: 1,
-          }} />
-          {/* Top + bottom fade */}
-          <div style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'linear-gradient(to bottom, rgba(0,17,43,0.4) 0%, transparent 20%, transparent 80%, var(--navy) 100%)',
-            zIndex: 1,
-          }} />
-
-          {/* Text content */}
-          <div style={{ position: 'relative', zIndex: 2, padding: '56px clamp(20px, 4vw, 40px) 48px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-              <Image
-                src="https://media.api-sports.io/football/leagues/1.png"
-                alt="FIFA World Cup 2026"
-                width={32}
-                height={32}
-                style={{ objectFit: 'contain', opacity: 0.85 }}
-              />
-              <p className="label" style={{ opacity: 0.7, margin: 0 }}>FIFA World Cup 2026 · Where legacies are written</p>
-            </div>
-            <h1 style={{
-              fontFamily: 'Cormorant Garamond, serif',
-              fontSize: 'clamp(2.2rem, 4vw, 4rem)',
-              fontWeight: 300,
-              lineHeight: 1.1,
-              color: 'var(--white)',
-              maxWidth: '560px',
-              margin: '0 0 18px 0',
-            }}>
-              It is not the critic who counts.
-              <br />
-              <em style={{ color: 'var(--gold)', fontWeight: 300 }}>It is the man in the arena.</em>
-            </h1>
-            <p style={{ fontSize: '13px', color: 'var(--muted)', maxWidth: '400px', lineHeight: '1.8', margin: '0 0 24px 0' }}>
-              Every match writes or rewrites a legacy. We track who is delivering when it counts —
-              told through the eyes of the fans watching it happen.
-            </p>
-            <HeroCTA />
+            fontFamily: 'Cormorant Garamond, serif',
+            fontSize: '1.1rem',
+            fontWeight: 500,
+            letterSpacing: '0.08em',
+            color: 'var(--white)',
+          }}>
+            Legacy Tracker
           </div>
         </div>
-
-        {/* Hero stats bar */}
-        <div style={{ padding: '0 clamp(20px, 4vw, 40px)', borderBottom: '1px solid var(--gold-border)', background: 'var(--navy-2)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '28px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: matchesPlayed > 0 ? '#4ade80' : 'rgba(255,255,255,0.2)' }} />
-            <span style={{ fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>
-              {matchesPlayed > 0 ? `${matchesPlayed} matches played` : 'Awaiting tournament data'}
-              {isLive && ` · ${liveMatches.length} live now`}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          {isLive && (
+            <span style={{ fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#4ade80', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
+              Live
             </span>
-          </div>
+          )}
+          <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{today}</span>
         </div>
+      </header>
 
-        {/* Main */}
-        <main style={{ padding: '40px clamp(16px, 4vw, 40px) 56px', maxWidth: '900px' }}>
-          <RedditDataLoader fixtures={fixturesForReddit} />
-
-          {/* Legacy Leaderboard — the centerpiece */}
-          <div style={{ marginBottom: '56px' }}>
-            <GreatnessLeaderboard entries={legacyEntries} />
-          </div>
-
-          {/* Mobile group standings */}
-          <div className="mobile-standings" style={{ marginBottom: '40px' }}>
-            <GroupStandings groups={standings} />
-          </div>
-
-          <SectionPanel>
-            {[
-              <div key="matches">
-                <Matches upcoming={upcomingMatches} finished={finishedMatches} live={liveMatches} teamRanks={teamRanks} />
-              </div>,
-              <div key="performers" id="performers">
-                <PerformersSection headless playerMeta={playerMeta} />
-                <div className="gold-line" style={{ margin: '40px 0' }} />
-                <TournamentFavourites />
-              </div>,
-              <FanVoiceSection key="fanvoice" headless />,
-            ]}
-          </SectionPanel>
-        </main>
-
-        {/* Footer */}
-        <footer style={{
-          borderTop: '1px solid var(--gold-border)',
-          padding: '24px clamp(20px, 4vw, 40px) 80px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
+      {/* Quote — always visible, above the ticker */}
+      <div style={{
+        borderBottom: '1px solid var(--gold-border)',
+        padding: '9px clamp(20px, 4vw, 40px)',
+        background: 'rgba(201,168,76,0.04)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+      }}>
+        <div style={{ width: '2px', height: '28px', background: 'var(--gold)', opacity: 0.5, flexShrink: 0 }} />
+        <p style={{
+          fontFamily: 'Cormorant Garamond, serif',
+          fontSize: '0.85rem',
+          fontStyle: 'italic',
+          color: 'rgba(255,255,255,0.55)',
+          margin: 0,
+          lineHeight: 1.5,
         }}>
-          <p style={{ fontSize: '11px', color: 'var(--muted)', margin: 0 }}>
-            Stats via api-sports.io · Fan voice via Reddit · FIFA World Cup 2026
-          </p>
-          <div style={{ display: 'flex', gap: '4px', height: '20px' }}>
-            <div style={{ width: '6px', background: 'var(--blue)', opacity: 0.7, borderRadius: '1px' }} />
-            <div style={{ width: '6px', background: 'var(--white)', opacity: 0.4, borderRadius: '1px' }} />
-            <div style={{ width: '6px', background: 'var(--red)', opacity: 0.7, borderRadius: '1px' }} />
-          </div>
-        </footer>
-
+          It is not the critic who counts. It is the man in the arena.
+        </p>
       </div>
+
+      {/* Score ticker */}
+      <MatchTicker fixtures={allFixtures} />
+
+      {/* Recap banner */}
+      <RecapBanner fixtures={allFixtures} />
+
+      {/* Matches played strip */}
+      <div style={{
+        padding: '7px clamp(20px, 4vw, 40px)',
+        borderBottom: '1px solid var(--gold-border)',
+        background: 'var(--navy)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+      }}>
+        <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: matchesPlayed > 0 ? '#4ade80' : 'rgba(255,255,255,0.2)', flexShrink: 0 }} />
+        <span style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+          {matchesPlayed > 0 ? `${matchesPlayed} matches played` : 'Awaiting tournament data'}
+          {isLive && ` · ${liveMatches.length} live now`}
+        </span>
+      </div>
+
+      {/* Main */}
+      <main style={{ padding: '0 0 80px' }}>
+        <RedditDataLoader fixtures={fixturesForReddit} />
+
+        <SectionPanel>
+          {[
+            /* ── Legacy tab ─────────────────────────────────────── */
+            <div key="legacy" style={{ position: 'relative', overflow: 'hidden' }}>
+              {/* Mbappé as subtle background */}
+              <Image
+                src="/Mbappe-hero.jpg"
+                alt=""
+                aria-hidden="true"
+                width={3538}
+                height={2359}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  right: -80,
+                  height: '100%',
+                  width: 'auto',
+                  objectFit: 'cover',
+                  objectPosition: 'center top',
+                  opacity: 0.07,
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                }}
+              />
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'linear-gradient(to right, var(--navy) 45%, rgba(0,17,43,0.7) 100%)',
+                pointerEvents: 'none',
+              }} />
+              <div style={{ position: 'relative', zIndex: 1, padding: '32px clamp(16px, 4vw, 40px) 40px' }}>
+                <GreatnessLeaderboard entries={legacyEntries} />
+              </div>
+            </div>,
+
+            /* ── Matches tab ────────────────────────────────────── */
+            <div key="matches" style={{ padding: '32px clamp(16px, 4vw, 40px) 40px' }}>
+              <GroupStandings groups={standings} />
+              <div style={{ marginTop: '40px' }}>
+                <Matches upcoming={upcomingMatches} finished={finishedMatches} live={liveMatches} teamRanks={teamRanks} />
+              </div>
+            </div>,
+
+            /* ── Buzzing tab ────────────────────────────────────── */
+            <div key="buzzing" style={{ padding: '32px clamp(16px, 4vw, 40px) 40px' }}>
+              <div style={{ marginBottom: '32px' }}>
+                <p className="label" style={{ marginBottom: '6px' }}>Fan Pulse</p>
+                <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '2rem', color: 'var(--white)', margin: '0 0 10px 0', fontWeight: 300 }}>
+                  What&apos;s Buzzing
+                </h2>
+                <div className="gold-line" />
+              </div>
+              <PerformersSection headless playerMeta={playerMeta} />
+              <div className="gold-line" style={{ margin: '48px 0' }} />
+              <TournamentFavourites />
+              <div className="gold-line" style={{ margin: '48px 0' }} />
+              <FanVoiceSection headless />
+            </div>,
+          ]}
+        </SectionPanel>
+      </main>
+
+      {/* Footer */}
+      <footer style={{
+        borderTop: '1px solid var(--gold-border)',
+        padding: '20px clamp(20px, 4vw, 40px) 100px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+      }}>
+        <p style={{ fontSize: '11px', color: 'var(--muted)', margin: 0 }}>
+          Stats via api-sports.io · Fan voice via Reddit · FIFA World Cup 2026
+        </p>
+        <div style={{ display: 'flex', gap: '4px', height: '16px' }}>
+          <div style={{ width: '5px', background: 'var(--blue)', opacity: 0.7, borderRadius: '1px' }} />
+          <div style={{ width: '5px', background: 'var(--white)', opacity: 0.4, borderRadius: '1px' }} />
+          <div style={{ width: '5px', background: 'var(--red)', opacity: 0.7, borderRadius: '1px' }} />
+        </div>
+      </footer>
+
     </div>
   );
 }
