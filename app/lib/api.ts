@@ -779,7 +779,13 @@ export async function computeLegacyLeaderboard(
   // Small batch size — the observed failure looks like a concurrent-in-flight-
   // requests cap rather than a per-minute quota (the per-minute budget has
   // plenty of headroom even when bursts fail), so keep simultaneous requests low.
-  const BATCH_SIZE = 2;
+  // Fixture events/stats are cached 24h in Vercel Data Cache, so real API
+  // calls only happen on the very first ever cold start. The outer unstable_cache
+  // (60s TTL) means this function body runs at most once per minute. Use a
+  // larger batch size and minimal delay — the old 700ms sleep was the primary
+  // cause of Vercel function timeouts (25 fixtures × 700ms = 8.75s, close to
+  // or exceeding the 10s limit before any actual network time was counted).
+  const BATCH_SIZE = 6;
   const allEvents: RawEvent[][] = [];
   const allPlayerStats: RawFixturePlayer[][] = [];
   for (let i = 0; i < finishedFixtures.length; i += BATCH_SIZE) {
@@ -791,7 +797,7 @@ export async function computeLegacyLeaderboard(
     allEvents.push(...eventsBatch);
     allPlayerStats.push(...playerStatsBatch);
     if (i + BATCH_SIZE < finishedFixtures.length) {
-      await new Promise(r => setTimeout(r, 700));
+      await new Promise(r => setTimeout(r, 100));
     }
   }
 

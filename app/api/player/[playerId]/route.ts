@@ -57,7 +57,7 @@ export async function GET(
     const matchHistory: PlayerMatchStat[] = [];
     let cumulative = 0;
 
-    const BATCH_SIZE = 3;
+    const BATCH_SIZE = 6;
     for (let i = 0; i < finishedFixtures.length; i += BATCH_SIZE) {
       const batch = finishedFixtures.slice(i, i + BATCH_SIZE);
       const [eventsBatch, statsBatch] = await Promise.all([
@@ -65,7 +65,7 @@ export async function GET(
         Promise.all(batch.map(f => getFixturePlayerStats(f.fixture.id))),
       ]);
       if (i + BATCH_SIZE < finishedFixtures.length) {
-        await new Promise(r => setTimeout(r, 400));
+        await new Promise(r => setTimeout(r, 100));
       }
 
       for (let bi = 0; bi < batch.length; bi++) {
