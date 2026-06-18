@@ -197,7 +197,7 @@ export default async function Page() {
       {/* Footer */}
       <footer style={{
         borderTop: '1px solid var(--gold-border)',
-        padding: '20px clamp(20px, 4vw, 40px) 24px',
+        padding: '20px clamp(20px, 4vw, 40px) 20px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
