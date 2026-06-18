@@ -12,26 +12,42 @@ import {
   getUpcomingFixtures,
   getFinishedFixtures,
   getLiveFixtures,
+  type LegacyEntry,
+  type LegacyMoment,
+  type ApiFixture,
+  type ApiScorer,
+  type StandingEntry,
 } from './lib/api';
 
-// ISR: page is statically cached and served from Vercel CDN. The lambda runs
-// at most once per 60 s in the background — all 100 k concurrent users hit the
-// edge cache, not the origin.
+// ISR: page shell is statically cached on Vercel CDN. All heavy API work is
+// wrapped in unstable_cache which uses Vercel's persistent Data Cache — this
+// survives new deployments, so a force-push never triggers an API storm.
 export const revalidate = 60;
 
-// computeLegacyMoment makes many API calls but fixture events/player stats are
-// cached at 86400s — re-runs after the first are fast. Revalidate at 60s to
-// match fixture freshness so the "today" moment appears within ~60s of FT.
-const getLegacyMomentCached = unstable_cache(
-  async () => {
+interface PageData {
+  allFixtures: ApiFixture[];
+  allScorers: ApiScorer[];
+  allAssists: ApiScorer[];
+  standings: StandingEntry[][];
+  legacyEntries: LegacyEntry[];
+  legacyMoment: LegacyMoment | null;
+}
+
+// Single cache entry for all expensive computation. Vercel Data Cache persists
+// across deployments — cold starts after a redeploy hit the cache, not the API.
+const getPageData = unstable_cache(
+  async (): Promise<PageData> => {
     const [fixtures, scorers, assists, standings] = await Promise.all([
       getFixtures(), getTopScorers(), getTopAssists(), getStandings(),
     ]);
     const allFixtures = fixtures ?? [];
-    const entries = await computeLegacyLeaderboard(allFixtures, scorers ?? [], assists ?? [], standings);
-    return computeLegacyMoment(allFixtures, standings, entries);
+    const allScorers = scorers ?? [];
+    const allAssists = assists ?? [];
+    const legacyEntries = await computeLegacyLeaderboard(allFixtures, allScorers, allAssists, standings);
+    const legacyMoment = await computeLegacyMoment(allFixtures, standings, legacyEntries);
+    return { allFixtures, allScorers, allAssists, standings, legacyEntries, legacyMoment };
   },
-  ['legacy-moment'],
+  ['page-data'],
   { revalidate: 60 },
 );
 
@@ -46,19 +62,7 @@ import LegacyMomentSplash from './components/LegacyMomentSplash';
 import { RedditDataLoader, PerformersSection, FanVoiceSection, TournamentFavourites } from './components/RedditShell';
 
 export default async function Page() {
-  const [fixtures, scorers, assists, standings] = await Promise.all([
-    getFixtures(),
-    getTopScorers(),
-    getTopAssists(),
-    getStandings(),
-  ]);
-
-  const allFixtures = fixtures ?? [];
-  const allScorers = scorers ?? [];
-  const allAssists = assists ?? [];
-
-  const legacyEntries = await computeLegacyLeaderboard(allFixtures, allScorers, allAssists, standings);
-  const legacyMoment = await getLegacyMomentCached();
+  const { allFixtures, allScorers, allAssists, standings, legacyEntries, legacyMoment } = await getPageData();
 
   const teamFlagMap = buildTeamFlagMap(allFixtures);
   const teamRanks = buildTeamRankMap(standings);
