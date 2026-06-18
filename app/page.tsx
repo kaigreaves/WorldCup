@@ -19,9 +19,9 @@ import {
 // edge cache, not the origin.
 export const revalidate = 60;
 
-// computeLegacyMoment makes 20+ sequential API calls. Isolate it in its own
-// 5-minute server-side cache so it doesn't block every 60-second page revalidation.
-// unstable_cache shares the result across all Lambda instances — no HTTP round-trip.
+// computeLegacyMoment makes many API calls but fixture events/player stats are
+// cached at 86400s — re-runs after the first are fast. Revalidate at 60s to
+// match fixture freshness so the "today" moment appears within ~60s of FT.
 const getLegacyMomentCached = unstable_cache(
   async () => {
     const [fixtures, scorers, assists, standings] = await Promise.all([
@@ -32,7 +32,7 @@ const getLegacyMomentCached = unstable_cache(
     return computeLegacyMoment(allFixtures, standings, entries);
   },
   ['legacy-moment'],
-  { revalidate: 300 },
+  { revalidate: 60 },
 );
 
 import Image from 'next/image';

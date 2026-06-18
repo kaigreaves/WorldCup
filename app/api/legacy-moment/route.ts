@@ -13,7 +13,7 @@ import {
 // to every 60-second revalidation cycle.  Isolating it here with a 5-minute
 // ISR means it runs at most 288 times per day instead of 1440, and the page
 // ISR becomes fast again.
-export const revalidate = 300;
+export const revalidate = 60;
 
 export async function GET() {
   try {
@@ -33,7 +33,7 @@ export async function GET() {
 
     return NextResponse.json(moment, {
       headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
       },
     });
   } catch (err) {

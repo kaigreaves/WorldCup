@@ -124,6 +124,7 @@ export default function SectionPanel({ children }: { children: React.ReactNode }
             ? 'slideInFromLeft 0.3s cubic-bezier(0.25,0.46,0.45,0.94) both'
             : undefined,
         }}
+        onAnimationEnd={() => setSlideDir(null)}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >

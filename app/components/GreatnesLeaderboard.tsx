@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { subscribeReddit } from '../lib/reddit-store';
 import type { LegacyEntry } from '../lib/api';
 import type { PerformerEntry } from '../lib/reddit-client';
+import PlayerCard from './PlayerCard';
 
 // ── Position label ────────────────────────────────────────────────────────────
 
@@ -84,6 +85,7 @@ export default function GreatnessLeaderboard({
 }) {
   const [ranked, setRanked] = useState<LegacyEntry[]>(entries);
   const [collapsed, setCollapsed] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState<LegacyEntry | null>(null);
   const titleRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -157,13 +159,24 @@ export default function GreatnessLeaderboard({
           border: '0.5px solid rgba(255,255,255,0.08)',
         }}>
           {ranked.map((entry, i) => (
-            <div key={entry.playerId} style={{
-              borderBottom: i < ranked.length - 1 ? '0.5px solid rgba(255,255,255,0.06)' : 'none',
-            }}>
+            <div
+              key={entry.playerId}
+              onClick={() => setSelectedPlayer(entry)}
+              style={{
+                borderBottom: i < ranked.length - 1 ? '0.5px solid rgba(255,255,255,0.06)' : 'none',
+                cursor: 'pointer',
+              }}
+            >
               <LeaderboardRow entry={entry} highlight={i < 3} compact={compact} />
             </div>
           ))}
         </div>
+      )}
+
+      {/* Rendered outside overflow:hidden container — iOS WebKit clips fixed
+          descendants when a parent has overflow:hidden + border-radius */}
+      {selectedPlayer && (
+        <PlayerCard entry={selectedPlayer} onClose={() => setSelectedPlayer(null)} />
       )}
     </section>
   );

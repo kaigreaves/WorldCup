@@ -594,7 +594,7 @@ const FIFA_RANKINGS: Record<string, number> = {
   'Trinidad and Tobago': 52, 'Iraq': 60, 'Qatar': 41,
 };
 
-function getOQS(teamName: string, standings: StandingEntry[][]): number {
+export function getOQS(teamName: string, standings: StandingEntry[][]): number {
   const rank = FIFA_RANKINGS[teamName] ?? 90;
   // Steep curve: rank 1 → 1.0, rank 51 → 0.1
   const fifaScore = Math.max(0.1, 1 - (rank - 1) / 50);
@@ -609,7 +609,7 @@ function getOQS(teamName: string, standings: StandingEntry[][]): number {
   return 0.6 + 0.4 * (fifaScore * 0.7 + tournScore * 0.3);
 }
 
-function getStageMultiplier(round: string): number {
+export function getStageMultiplier(round: string): number {
   const r = round.toLowerCase();
   if (r.includes('final') && !r.includes('semi') && !r.includes('quarter') && !r.includes('3rd')) return 2.5;
   if (r.includes('semi')) return 2.0;
@@ -620,7 +620,7 @@ function getStageMultiplier(round: string): number {
 
 // ── Fixture event fetching (cached 24h — immutable once match ends) ───────────
 
-interface RawEvent {
+export interface RawEvent {
   time: { elapsed: number; extra: number | null };
   team: { id: number; name: string };
   player: { id: number; name: string };
@@ -643,11 +643,11 @@ interface RawFixturePlayer {
   }>;
 }
 
-async function getFixtureEvents(fixtureId: number): Promise<RawEvent[]> {
+export async function getFixtureEvents(fixtureId: number): Promise<RawEvent[]> {
   return (await apiFetch<RawEvent[]>(`/fixtures/events?fixture=${fixtureId}`, 86400)) ?? [];
 }
 
-async function getFixturePlayerStats(fixtureId: number): Promise<RawFixturePlayer[]> {
+export async function getFixturePlayerStats(fixtureId: number): Promise<RawFixturePlayer[]> {
   return (await apiFetch<RawFixturePlayer[]>(`/fixtures/players?fixture=${fixtureId}`, 86400)) ?? [];
 }
 
@@ -664,7 +664,7 @@ interface ClassifiedGoal {
   isGameWinner: boolean;
 }
 
-function classifyGoals(
+export function classifyGoals(
   events: RawEvent[],
   homeTeamId: number,
   finalHomeScore: number,
