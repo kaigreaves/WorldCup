@@ -157,7 +157,7 @@ export default async function Page() {
       </div>
 
       {/* Main */}
-      <main style={{ padding: '0 0 62px' }}>
+      <main style={{ padding: '0 0 calc(62px + env(safe-area-inset-bottom))' }}>
         <RedditDataLoader fixtures={fixturesForReddit} />
 
         <SectionPanel>
