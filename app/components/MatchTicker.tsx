@@ -89,7 +89,7 @@ export default function MatchTicker({ fixtures }: { fixtures: ApiFixture[] }) {
 
   return (
     <div style={{
-      position: 'sticky', top: '56px', zIndex: 90,
+      position: 'sticky', top: 'calc(56px + env(safe-area-inset-top))', zIndex: 90,
       background: 'var(--navy)', borderBottom: '1px solid var(--gold-border)',
       display: 'flex', alignItems: 'center', height: '44px', gap: 0,
     }}>

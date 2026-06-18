@@ -74,11 +74,11 @@ export default async function Page() {
       {/* Header */}
       <header style={{
         borderBottom: '1px solid var(--gold-border)',
-        padding: '0 clamp(20px, 4vw, 40px)',
+        padding: 'env(safe-area-inset-top) clamp(20px, 4vw, 40px) 0',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        height: '56px',
+        height: 'calc(56px + env(safe-area-inset-top))',
         position: 'sticky',
         top: 0,
         zIndex: 100,
@@ -157,7 +157,7 @@ export default async function Page() {
       </div>
 
       {/* Main */}
-      <main style={{ padding: '0 0 80px' }}>
+      <main style={{ padding: '0 0 calc(62px + env(safe-area-inset-bottom))' }}>
         <RedditDataLoader fixtures={fixturesForReddit} />
 
         <SectionPanel>
