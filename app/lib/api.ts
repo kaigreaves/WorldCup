@@ -92,15 +92,19 @@ export interface ApiFixture {
 // ── Fetchers ─────────────────────────────────────────────────────────────────
 
 export async function getFixtures(): Promise<ApiFixture[] | null> {
-  return apiFetch<ApiFixture[]>(`/fixtures?league=${LEAGUE}&season=${SEASON}`, 60);
+  // TEMP: extended TTL to preserve cached data during API quota exhaustion.
+  // Revert to 60 once Supabase ingestion cron is in place.
+  return apiFetch<ApiFixture[]>(`/fixtures?league=${LEAGUE}&season=${SEASON}`, 86400);
 }
 
 export async function getTopScorers(): Promise<ApiScorer[] | null> {
-  return apiFetch<ApiScorer[]>(`/players/topscorers?league=${LEAGUE}&season=${SEASON}`);
+  // TEMP: see getFixtures
+  return apiFetch<ApiScorer[]>(`/players/topscorers?league=${LEAGUE}&season=${SEASON}`, 86400);
 }
 
 export async function getTopAssists(): Promise<ApiScorer[] | null> {
-  return apiFetch<ApiScorer[]>(`/players/topassists?league=${LEAGUE}&season=${SEASON}`);
+  // TEMP: see getFixtures
+  return apiFetch<ApiScorer[]>(`/players/topassists?league=${LEAGUE}&season=${SEASON}`, 86400);
 }
 
 export interface StandingEntry {
@@ -115,7 +119,8 @@ export interface StandingEntry {
 
 export async function getStandings(): Promise<StandingEntry[][]> {
   interface RawStandings { league: { standings: StandingEntry[][] } }
-  const res = await apiFetch<RawStandings[]>(`/standings?league=${LEAGUE}&season=${SEASON}`);
+  // TEMP: see getFixtures
+  const res = await apiFetch<RawStandings[]>(`/standings?league=${LEAGUE}&season=${SEASON}`, 86400);
   return res?.[0]?.league?.standings ?? [];
 }
 

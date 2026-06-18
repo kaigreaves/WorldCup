@@ -31,6 +31,9 @@ interface PageData {
   standings: StandingEntry[][];
   legacyEntries: LegacyEntry[];
   legacyMoment: LegacyMoment | null;
+  // ISO timestamp of when the data was fetched. Used to show "last updated"
+  // in the UI and to distinguish a real error from a pre-tournament empty state.
+  computedAt: string;
 }
 
 // Single cache entry for all expensive computation. Vercel Data Cache persists
@@ -45,10 +48,12 @@ const getPageData = unstable_cache(
     const allAssists = assists ?? [];
     const legacyEntries = await computeLegacyLeaderboard(allFixtures, allScorers, allAssists, standings);
     const legacyMoment = await computeLegacyMoment(allFixtures, standings, legacyEntries);
-    return { allFixtures, allScorers, allAssists, standings, legacyEntries, legacyMoment };
+    return { allFixtures, allScorers, allAssists, standings, legacyEntries, legacyMoment, computedAt: new Date().toISOString() };
   },
   ['page-data'],
-  { revalidate: 60 },
+  // TEMP: extended TTL to match API fetch cache during quota exhaustion.
+  // Revert to 60 once Supabase ingestion cron is in place.
+  { revalidate: 86400 },
 );
 
 import Image from 'next/image';
@@ -62,7 +67,7 @@ import LegacyMomentSplash from './components/LegacyMomentSplash';
 import { RedditDataLoader, PerformersSection, FanVoiceSection, TournamentFavourites } from './components/RedditShell';
 
 export default async function Page() {
-  const { allFixtures, allScorers, allAssists, standings, legacyEntries, legacyMoment } = await getPageData();
+  const { allFixtures, allScorers, allAssists, standings, legacyEntries, legacyMoment, computedAt } = await getPageData();
 
   const teamFlagMap = buildTeamFlagMap(allFixtures);
   const teamRanks = buildTeamRankMap(standings);
@@ -179,7 +184,7 @@ export default async function Page() {
           {[
             /* ── Legacy tab ─────────────────────────────────────── */
             <div key="legacy" style={{ padding: '32px clamp(16px, 4vw, 40px) 40px' }}>
-              <GreatnessLeaderboard entries={legacyEntries} />
+              <GreatnessLeaderboard entries={legacyEntries} computedAt={computedAt} />
               <p style={{ fontSize: '10px', color: 'var(--muted-2)', marginTop: '24px', letterSpacing: '0.08em' }}>
                 Stats via api-sports.io · Fan voice via Reddit · FIFA World Cup 2026
               </p>

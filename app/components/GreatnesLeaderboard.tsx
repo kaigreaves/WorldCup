@@ -76,12 +76,21 @@ function applyBuzzModifier(entries: LegacyEntry[], performers: PerformerEntry[])
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+function timeAgo(iso: string): string {
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  return `${Math.floor(mins / 60)}h ago`;
+}
+
 export default function GreatnessLeaderboard({
   entries,
   compact = false,
+  computedAt,
 }: {
   entries: LegacyEntry[];
   compact?: boolean;
+  computedAt?: string;
 }) {
   const [ranked, setRanked] = useState<LegacyEntry[]>(entries);
   const [collapsed, setCollapsed] = useState(false);
@@ -150,7 +159,28 @@ export default function GreatnessLeaderboard({
       </div>
 
       {ranked.length === 0 ? (
-        <p style={{ color: 'var(--muted)', fontStyle: 'italic', fontSize: '13px' }}>Tournament data loading.</p>
+        <div style={{ padding: '32px 0' }}>
+          {/* Distinguish: genuine pre-tournament empty vs API failure.
+              If computedAt exists and is recent, data was fetched but the
+              tournament hasn't produced scorers yet — expected state.
+              If computedAt is missing or very stale, something went wrong. */}
+          {computedAt && (Date.now() - new Date(computedAt).getTime()) < 10 * 60 * 1000 ? (
+            <p style={{ color: 'var(--muted)', fontStyle: 'italic', fontSize: '13px', margin: 0 }}>
+              Awaiting tournament data · updated {timeAgo(computedAt)}
+            </p>
+          ) : (
+            <div>
+              <p style={{ color: 'rgba(255,100,100,0.7)', fontSize: '13px', margin: '0 0 6px 0' }}>
+                Leaderboard data unavailable
+              </p>
+              <p style={{ color: 'var(--muted)', fontStyle: 'italic', fontSize: '11px', margin: 0 }}>
+                {computedAt
+                  ? `Last successful fetch ${timeAgo(computedAt)} · will retry automatically`
+                  : 'Connecting to data source…'}
+              </p>
+            </div>
+          )}
+        </div>
       ) : (
         <div style={{
           background: 'rgba(255,255,255,0.04)',
@@ -170,6 +200,13 @@ export default function GreatnessLeaderboard({
               <LeaderboardRow entry={entry} highlight={i < 3} compact={compact} />
             </div>
           ))}
+          {computedAt && !compact && (
+            <div style={{ padding: '8px 16px', borderTop: '0.5px solid rgba(255,255,255,0.04)' }}>
+              <span style={{ fontSize: '9px', color: 'var(--muted-2)', letterSpacing: '0.08em' }}>
+                Updated {timeAgo(computedAt)}
+              </span>
+            </div>
+          )}
         </div>
       )}
 
