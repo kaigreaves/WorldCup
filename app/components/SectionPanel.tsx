@@ -40,7 +40,7 @@ export default function SectionPanel({ children }: { children: React.ReactNode }
       </div>
 
       {/* ── Panel content ─────────────────────────────────────────────────── */}
-      <div key={animKey} className="section-panel-content">
+      <div key={animKey} className="section-panel-content" style={{ paddingBottom: '24px' }}>
         {panels[active]}
       </div>
 
