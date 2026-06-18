@@ -120,6 +120,7 @@ export default function MatchTicker({ fixtures }: { fixtures: ApiFixture[] }) {
       <div style={{
         flex: 1, overflowX: 'auto', display: 'flex', alignItems: 'center',
         gap: '1px', padding: '0 4px', height: '100%', scrollbarWidth: 'none',
+        WebkitOverflowScrolling: 'touch',
       }}>
         {current.matches.map(f => {
           const isLive = LIVE.has(f.fixture.status.short);

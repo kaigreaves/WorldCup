@@ -165,6 +165,9 @@ export default async function Page() {
             /* ── Legacy tab ─────────────────────────────────────── */
             <div key="legacy" style={{ padding: '32px clamp(16px, 4vw, 40px) 40px' }}>
               <GreatnessLeaderboard entries={legacyEntries} />
+              <p style={{ fontSize: '10px', color: 'var(--muted-2)', marginTop: '24px', letterSpacing: '0.08em' }}>
+                Stats via api-sports.io · Fan voice via Reddit · FIFA World Cup 2026
+              </p>
             </div>,
 
             /* ── Matches tab ────────────────────────────────────── */
@@ -194,23 +197,6 @@ export default async function Page() {
         </SectionPanel>
       </main>
 
-      {/* Footer */}
-      <footer style={{
-        borderTop: '1px solid var(--gold-border)',
-        padding: '20px clamp(20px, 4vw, 40px) 20px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-      }}>
-        <p style={{ fontSize: '11px', color: 'var(--muted)', margin: 0 }}>
-          Stats via api-sports.io · Fan voice via Reddit · FIFA World Cup 2026
-        </p>
-        <div style={{ display: 'flex', gap: '4px', height: '16px' }}>
-          <div style={{ width: '5px', background: 'var(--blue)', opacity: 0.7, borderRadius: '1px' }} />
-          <div style={{ width: '5px', background: 'var(--white)', opacity: 0.4, borderRadius: '1px' }} />
-          <div style={{ width: '5px', background: 'var(--red)', opacity: 0.7, borderRadius: '1px' }} />
-        </div>
-      </footer>
 
     </div>
   );
