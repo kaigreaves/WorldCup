@@ -51,13 +51,11 @@ const getPageData = unstable_cache(
     return { allFixtures, allScorers, allAssists, standings, legacyEntries, legacyMoment, computedAt: new Date().toISOString() };
   },
   ['page-data'],
-  // TEMP: extended TTL to match API fetch cache during quota exhaustion.
-  // Revert to 60 once Supabase ingestion cron is in place.
-  { revalidate: 86400 },
+  { revalidate: 300 },
 );
 
 import Image from 'next/image';
-import GreatnessLeaderboard from './components/GreatnesLeaderboard';
+import GreatnessLeaderboard from './components/GreatnessLeaderboard';
 import GroupStandings from './components/GroupStandings';
 import Matches from './components/Matches';
 import SectionPanel from './components/SectionPanel';
@@ -146,12 +144,14 @@ export default async function Page() {
             </div>
           </div>
         </div>
-        {isLive && (
-          <span style={{ fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 500 }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ade80', display: 'inline-block', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
-            Live
-          </span>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {isLive && (
+            <span style={{ fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 500 }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ade80', display: 'inline-block', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
+              Live
+            </span>
+          )}
+        </div>
       </header>
 
       {/* Score ticker */}
@@ -200,17 +200,20 @@ export default async function Page() {
 
             /* ── Buzzing tab ────────────────────────────────────── */
             <div key="buzzing" style={{ padding: '32px clamp(16px, 4vw, 40px) 40px' }}>
-              <div style={{ marginBottom: '32px' }}>
-                <p className="label" style={{ marginBottom: '6px' }}>Fan Pulse</p>
-                <h2 style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '34px', color: 'var(--white)', margin: '0 0 10px 0', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-                  Who&apos;s Buzzing?
-                </h2>
-                <div className="gold-line" />
+              <div style={{ marginBottom: '36px' }}>
+                <p className="section-eyebrow" style={{ marginBottom: '8px' }}>Fan Pulse</p>
+                <h2 className="section-large-title">Who&apos;s Buzzing?</h2>
+                <div className="gold-line" style={{ marginTop: '16px', opacity: 0.5 }} />
               </div>
               <PerformersSection headless playerMeta={playerMeta} />
-              <div className="gold-line" style={{ margin: '48px 0' }} />
+              <div className="gold-line" style={{ margin: '52px 0', opacity: 0.3 }} />
               <TournamentFavourites />
-              <div className="gold-line" style={{ margin: '48px 0' }} />
+              <div className="gold-line" style={{ margin: '52px 0', opacity: 0.3 }} />
+              <div style={{ marginBottom: '28px' }}>
+                <p className="section-eyebrow" style={{ marginBottom: '8px' }}>Fan Voice</p>
+                <h2 className="section-large-title">Trending</h2>
+                <div className="gold-line" style={{ marginTop: '16px', opacity: 0.5 }} />
+              </div>
               <FanVoiceSection headless />
             </div>,
           ]}
