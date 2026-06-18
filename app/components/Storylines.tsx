@@ -103,7 +103,7 @@ function HeroCard({ story }: { story: Storyline }) {
       {/* Content panel */}
       <div style={{ padding: '28px 28px 24px' }}>
         <h3 style={{
-          fontFamily: 'Cormorant Garamond, serif',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
           fontSize: 'clamp(1.4rem, 2.5vw, 2rem)',
           fontWeight: 400, lineHeight: 1.25, color: 'var(--white)', margin: '0 0 14px 0',
         }}>
@@ -157,7 +157,7 @@ function StoryCard({ story }: { story: Storyline }) {
               style={{ objectFit: 'contain', marginTop: '4px', flexShrink: 0, opacity: 0.9 }} />
           )}
           <h3 style={{
-            fontFamily: 'Cormorant Garamond, serif',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
             fontSize: 'clamp(1.05rem, 1.8vw, 1.35rem)',
             fontWeight: 400, lineHeight: 1.3, color: 'var(--white)', margin: 0,
           }}>

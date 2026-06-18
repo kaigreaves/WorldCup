@@ -143,7 +143,7 @@ export default function MatchTicker({ fixtures }: { fixtures: ApiFixture[] }) {
               </span>
               <span style={{
                 fontSize: notStarted ? '10px' : '12px',
-                fontFamily: notStarted ? 'Inter, sans-serif' : 'Cormorant Garamond, serif',
+                fontFamily: 'system-ui, -apple-system, sans-serif',
                 fontWeight: 500,
                 color: isLive ? '#4ade80' : notStarted ? 'var(--gold)' : 'var(--white)',
                 letterSpacing: '0.05em',

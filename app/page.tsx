@@ -92,7 +92,7 @@ export default async function Page() {
             style={{ height: '28px', width: 'auto', objectFit: 'contain' }}
           />
           <div style={{
-            fontFamily: 'Cormorant Garamond, serif',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
             fontSize: '1.1rem',
             fontWeight: 500,
             letterSpacing: '0.08em',
@@ -123,7 +123,7 @@ export default async function Page() {
       }}>
         <div style={{ width: '2px', height: '28px', background: 'var(--gold)', opacity: 0.5, flexShrink: 0 }} />
         <p style={{
-          fontFamily: 'Cormorant Garamond, serif',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
           fontSize: '0.85rem',
           fontStyle: 'italic',
           color: 'rgba(255,255,255,0.55)',
@@ -182,7 +182,7 @@ export default async function Page() {
             <div key="buzzing" style={{ padding: '32px clamp(16px, 4vw, 40px) 40px' }}>
               <div style={{ marginBottom: '32px' }}>
                 <p className="label" style={{ marginBottom: '6px' }}>Fan Pulse</p>
-                <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '2rem', color: 'var(--white)', margin: '0 0 10px 0', fontWeight: 300 }}>
+                <h2 style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '2rem', color: 'var(--white)', margin: '0 0 10px 0', fontWeight: 300 }}>
                   Who&apos;s Buzzing?
                 </h2>
                 <div className="gold-line" />

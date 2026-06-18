@@ -205,7 +205,7 @@ export function PerformersSection({ headless, playerMeta = {} }: { headless?: bo
                         {meta?.teamLogo && (
                           <Image src={meta.teamLogo} alt="" width={16} height={16} style={{ objectFit: 'contain', flexShrink: 0 }} />
                         )}
-                        <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.5rem', fontWeight: 400, margin: 0, color: 'var(--white)' }}>
+                        <h3 style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '1.5rem', fontWeight: 400, margin: 0, color: 'var(--white)' }}>
                           {p.name}
                         </h3>
                       </div>
@@ -214,7 +214,7 @@ export function PerformersSection({ headless, playerMeta = {} }: { headless?: bo
                   <div style={{ display: 'flex', gap: '16px', marginBottom: '14px' }}>
                     {[['mentions', p.mentionCount], ['fan score', Math.round(p.weightedScore).toLocaleString()]].map(([label, val]) => (
                       <div key={String(label)}>
-                        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.4rem', color: 'var(--gold)', lineHeight: 1 }}>{val}</div>
+                        <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '1.4rem', color: 'var(--gold)', lineHeight: 1 }}>{val}</div>
                         <div style={{ fontSize: '10px', color: 'var(--muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '2px' }}>{label}</div>
                       </div>
                     ))}
@@ -273,7 +273,7 @@ export function FanVoiceSection({ headless }: { headless?: boolean } = {}) {
               borderRadius: '2px',
             }}>
               <span style={{
-                fontFamily: 'Cormorant Garamond, serif', fontSize: '2rem', fontWeight: 300,
+                fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '2rem', fontWeight: 300,
                 color: 'var(--gold)', opacity: i === 0 ? 0.6 : 0.25, lineHeight: 1, paddingTop: '4px',
               }}>
                 {String(i + 1).padStart(2, '0')}
@@ -345,14 +345,14 @@ export function TournamentFavourites() {
             borderRadius: '1px',
           }}>
             <span style={{
-              fontFamily: 'Cormorant Garamond, serif', fontSize: '2rem', fontWeight: 300,
+              fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '2rem', fontWeight: 300,
               color: 'var(--gold)', opacity: i === 0 ? 0.7 : 0.3, lineHeight: 1,
             }}>
               {String(i + 1).padStart(2, '0')}
             </span>
             <div>
               <div style={{
-                fontFamily: 'Cormorant Garamond, serif',
+                fontFamily: 'system-ui, -apple-system, sans-serif',
                 fontSize: '1.15rem', fontWeight: i < 3 ? 500 : 400,
                 color: i < 3 ? 'var(--white)' : 'rgba(255,255,255,0.7)',
               }}>
@@ -363,7 +363,7 @@ export function TournamentFavourites() {
               </div>
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.4rem', color: 'var(--gold)', lineHeight: 1 }}>
+              <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '1.4rem', color: 'var(--gold)', lineHeight: 1 }}>
                 {p.mentionCount}
               </div>
               <div style={{ fontSize: '9px', color: 'var(--muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '2px' }}>

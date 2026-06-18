@@ -59,7 +59,7 @@ function PerformerCard({ entry, index }: { entry: PerformerEntry; index: number 
         </div>
 
         <h3 style={{
-          fontFamily: 'Cormorant Garamond, serif',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
           fontSize: '1.5rem',
           fontWeight: 400,
           margin: '0 0 6px 0',
@@ -70,7 +70,7 @@ function PerformerCard({ entry, index }: { entry: PerformerEntry; index: number 
 
         <div style={{ display: 'flex', gap: '16px', marginBottom: '14px' }}>
           <div>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.4rem', color: 'var(--gold)', lineHeight: 1 }}>
+            <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '1.4rem', color: 'var(--gold)', lineHeight: 1 }}>
               {entry.mentionCount}
             </div>
             <div style={{ fontSize: '10px', color: 'var(--muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '2px' }}>
@@ -78,7 +78,7 @@ function PerformerCard({ entry, index }: { entry: PerformerEntry; index: number 
             </div>
           </div>
           <div>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.4rem', color: 'var(--gold)', lineHeight: 1 }}>
+            <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '1.4rem', color: 'var(--gold)', lineHeight: 1 }}>
               {Math.round(entry.weightedScore).toLocaleString()}
             </div>
             <div style={{ fontSize: '10px', color: 'var(--muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '2px' }}>

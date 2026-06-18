@@ -28,7 +28,7 @@ function TeamBadge({ team, dim }: { team: ApiFixture['teams']['home']; dim?: boo
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, opacity: dim ? 0.45 : 1 }}>
       {team.logo && <Image src={team.logo} alt={team.name} width={28} height={28} style={{ objectFit: 'contain' }} />}
-      <span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.05rem', color: 'var(--white)', whiteSpace: 'nowrap' }}>
+      <span style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '1.05rem', color: 'var(--white)', whiteSpace: 'nowrap' }}>
         {team.name}
       </span>
     </div>
@@ -54,7 +54,7 @@ function LiveCard({ fix }: { fix: ApiFixture }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <TeamBadge team={fix.teams.home} />
         <div style={{ textAlign: 'center', minWidth: '80px', flexShrink: 0 }}>
-          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '2.5rem', fontWeight: 300, color: 'var(--white)', lineHeight: 1, letterSpacing: '0.05em' }}>
+          <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '2.5rem', fontWeight: 300, color: 'var(--white)', lineHeight: 1, letterSpacing: '0.05em' }}>
             {home} <span style={{ color: 'var(--red)', opacity: 0.7 }}>—</span> {away}
           </div>
         </div>
@@ -87,7 +87,7 @@ function UpcomingCard({ fix }: { fix: ApiFixture }) {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <TeamBadge team={fix.teams.home} />
-        <span style={{ color: 'var(--gold)', fontFamily: 'Cormorant Garamond, serif', fontSize: '1.1rem', flexShrink: 0 }}>vs</span>
+        <span style={{ color: 'var(--gold)', fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '1.1rem', flexShrink: 0 }}>vs</span>
         <TeamBadge team={fix.teams.away} />
       </div>
       <MatchFanComments
@@ -136,7 +136,7 @@ function FinishedCard({ fix, teamRanks = {} }: { fix: ApiFixture; teamRanks?: Re
         <TeamBadge team={fix.teams.home} dim={fix.teams.away.winner === true} />
         <div style={{ textAlign: 'center', minWidth: '80px', flexShrink: 0 }}>
           <div style={{
-            fontFamily: 'Cormorant Garamond, serif', fontSize: '2.5rem', fontWeight: 300,
+            fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '2.5rem', fontWeight: 300,
             color: 'var(--white)', lineHeight: 1, letterSpacing: '0.05em',
           }}>
             {home} <span style={{ color: 'var(--gold)', opacity: 0.5 }}>—</span> {away}

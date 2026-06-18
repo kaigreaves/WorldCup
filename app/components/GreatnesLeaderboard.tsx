@@ -138,7 +138,7 @@ function LeaderboardRow({
 
       {/* Rank */}
       <span style={{
-        fontFamily: 'Cormorant Garamond, serif',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
         fontSize: compact ? '0.85rem' : '2rem',
         fontWeight: 300,
         color: 'var(--gold)',
@@ -164,7 +164,7 @@ function LeaderboardRow({
             />
           )}
           <span style={{
-            fontFamily: 'Cormorant Garamond, serif',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
             fontSize: compact ? '0.88rem' : '1.1rem',
             fontWeight: highlight ? 500 : 400,
             color: highlight ? 'var(--white)' : 'rgba(255,255,255,0.75)',
@@ -209,7 +209,7 @@ function LeaderboardRow({
       {/* Score */}
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
         <div style={{
-          fontFamily: 'Cormorant Garamond, serif',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
           fontSize: compact ? '0.95rem' : '1.3rem',
           fontWeight: 300,
           color: 'var(--gold)',

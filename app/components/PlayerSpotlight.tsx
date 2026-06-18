@@ -68,7 +68,7 @@ function SpotlightCard({ player, scorers, assists, fixtures }: {
                 {player.teamTla} · {player.role}
               </p>
             </div>
-            <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.5rem', fontWeight: 400, margin: 0, color: 'var(--white)' }}>
+            <h3 style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '1.5rem', fontWeight: 400, margin: 0, color: 'var(--white)' }}>
               {player.fullName}
             </h3>
           </div>
@@ -85,7 +85,7 @@ function SpotlightCard({ player, scorers, assists, fixtures }: {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '20px' }}>
           {[['Goals', stats.goals], ['Assists', stats.assists], ['Apps', stats.matches]].map(([label, value]) => (
             <div key={String(label)} style={{ background: 'var(--navy-3)', padding: '10px 12px', borderRadius: '2px', textAlign: 'center' }}>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.6rem', fontWeight: 300, color: 'var(--gold)', lineHeight: 1 }}>{value}</div>
+              <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '1.6rem', fontWeight: 300, color: 'var(--gold)', lineHeight: 1 }}>{value}</div>
               <div style={{ fontSize: '10px', color: 'var(--muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '3px' }}>{label}</div>
             </div>
           ))}

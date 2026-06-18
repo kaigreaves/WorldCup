@@ -53,7 +53,7 @@ export default function FanVoice({ data }: Props) {
               }}
             >
               <span style={{
-                fontFamily: 'Cormorant Garamond, serif',
+                fontFamily: 'system-ui, -apple-system, sans-serif',
                 fontSize: '2rem',
                 fontWeight: 300,
                 color: 'var(--gold)',
