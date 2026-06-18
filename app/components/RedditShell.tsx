@@ -147,7 +147,7 @@ export function PerformersSection({ headless, playerMeta = {} }: { headless?: bo
       {!headless && (
         <div className="mb-8">
           <p className="label mb-3">The Standouts</p>
-          <h2 style={{ fontSize: '2.5rem', color: 'var(--white)' }}>Performers of the Day</h2>
+          <h2 style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '34px', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.1, color: 'var(--white)', margin: 0 }}>Performers of the Day</h2>
           <div className="gold-line mt-4" />
           <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '10px', fontStyle: 'italic' }}>
             Driven by Reddit — whoever fans are raving about most
@@ -194,22 +194,13 @@ export function PerformersSection({ headless, playerMeta = {} }: { headless?: bo
                       {buzz} buzz
                     </span>
                   </div>
-                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '6px' }}>
-                    {meta?.photo && (
-                      <div style={{ flexShrink: 0, width: '44px', height: '44px', borderRadius: '2px', overflow: 'hidden', border: '1px solid var(--gold-border)' }}>
-                        <Image src={meta.photo} alt={p.name} width={44} height={44} style={{ objectFit: 'cover', objectPosition: 'top center', width: '100%', height: '100%' }} />
-                      </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                    {meta?.teamLogo && (
+                      <Image src={meta.teamLogo} alt="" width={20} height={20} style={{ objectFit: 'contain', flexShrink: 0 }} />
                     )}
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-                        {meta?.teamLogo && (
-                          <Image src={meta.teamLogo} alt="" width={16} height={16} style={{ objectFit: 'contain', flexShrink: 0 }} />
-                        )}
-                        <h3 style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '1.5rem', fontWeight: 400, margin: 0, color: 'var(--white)' }}>
-                          {p.name}
-                        </h3>
-                      </div>
-                    </div>
+                    <h3 style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '1.4rem', fontWeight: 500, margin: 0, color: 'var(--white)', letterSpacing: '-0.01em' }}>
+                      {p.name}
+                    </h3>
                   </div>
                   <div style={{ display: 'flex', gap: '16px', marginBottom: '14px' }}>
                     {[['mentions', p.mentionCount], ['fan score', Math.round(p.weightedScore).toLocaleString()]].map(([label, val]) => (
@@ -244,7 +235,7 @@ export function FanVoiceSection({ headless }: { headless?: boolean } = {}) {
       {!headless && (
         <div className="mb-8">
           <p className="label mb-3">The Crowd</p>
-          <h2 style={{ fontSize: '2.5rem', color: 'var(--white)' }}>Fan Voice</h2>
+          <h2 style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '34px', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.1, color: 'var(--white)', margin: 0 }}>Fan Voice</h2>
           <div className="gold-line mt-4" />
           {data && (
             <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '10px', fontStyle: 'italic' }}>
@@ -328,7 +319,7 @@ export function TournamentFavourites() {
     <section>
       <div className="mb-8">
         <p className="label mb-3">Fan Verdict</p>
-        <h2 style={{ fontSize: '2.5rem', color: 'var(--white)' }}>Tournament Favourites</h2>
+        <h2 style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '34px', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.1, color: 'var(--white)', margin: '0 0 0 0' }}>Tournament Favourites</h2>
         <div className="gold-line mt-4" />
         <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '10px', fontStyle: 'italic' }}>
           Who fans have talked about most across every thread this tournament

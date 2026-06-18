@@ -634,7 +634,7 @@ interface RawFixturePlayer {
   players: Array<{
     player: { id: number; name: string; photo: string };
     statistics: Array<{
-      games: { position: string; minutes: number | null; substitute: boolean };
+      games: { position: string; minutes: number | null; substitute: boolean; rating: string | null };
       goals: { total: number | null; conceded: number | null; saves: number | null };
       tackles: { total: number | null; interceptions: number | null; blocks: number | null };
       duels: { total: number | null; won: number | null };
@@ -1067,4 +1067,245 @@ export async function computeLegacyLeaderboard(
   return top20
     .sort((a, b) => b.legacyScore - a.legacyScore)
     .map((e, i) => ({ ...e, rank: i + 1 }));
+}
+
+// ── Legacy Moment of the Day ──────────────────────────────────────────────────
+
+export interface LegacyMoment {
+  playerName: string;
+  teamName: string;
+  teamLogo: string;
+  position: string;
+  // Match context
+  opponent: string;
+  opponentLogo: string;
+  homeScore: number;
+  awayScore: number;
+  isHome: boolean;
+  round: string;
+  stageMultiplier: number;
+  matchDate: string;
+  // Performance
+  goals: number;
+  assists: number;
+  cleanSheet: boolean;
+  penaltiesSaved: number;
+  hatTrick: boolean;
+  gameWinningGoals: number;
+  equalizerGoals: number;
+  matchRating: string | null;
+  // Legacy impact
+  legacyPtsGained: number;
+  rankBefore: number;  // rank if today's pts excluded
+  rankAfter: number;   // current rank in full leaderboard
+  // Label
+  isTodayMoment: boolean; // false = best single match of full tournament
+}
+
+function easternDateKey(d: Date): string {
+  // Vercel runs UTC — convert to America/New_York before comparing dates
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(d);
+  const y = parts.find(p => p.type === 'year')!.value;
+  const m = parts.find(p => p.type === 'month')!.value;
+  const day = parts.find(p => p.type === 'day')!.value;
+  return `${y}-${m}-${day}`;
+}
+
+export async function computeLegacyMoment(
+  fixtures: ApiFixture[],
+  standings: StandingEntry[][],
+  fullLeaderboard: LegacyEntry[],
+): Promise<LegacyMoment | null> {
+  const FINISHED = new Set(['FT', 'AET', 'PEN']);
+  const todayKey = easternDateKey(new Date());
+
+  const allFinished = fixtures.filter(f => FINISHED.has(f.fixture.status.short));
+  const todayFinished = allFinished.filter(f => easternDateKey(new Date(f.fixture.date)) === todayKey);
+  const isTodayMoment = todayFinished.length > 0;
+  const targetFixtures = isTodayMoment ? todayFinished : allFinished;
+
+  if (targetFixtures.length === 0) return null;
+
+  const teamLogoMap: Record<string, string> = {};
+  for (const f of fixtures) {
+    teamLogoMap[f.teams.home.name] = f.teams.home.logo;
+    teamLogoMap[f.teams.away.name] = f.teams.away.logo;
+  }
+
+  // Track best performance across target fixtures
+  interface BestPerf {
+    playerName: string; teamName: string; teamLogo: string; position: string;
+    opponent: string; opponentLogo: string; homeScore: number; awayScore: number;
+    isHome: boolean; round: string; stageMultiplier: number; matchDate: string;
+    goals: number; assists: number; cleanSheet: boolean; penaltiesSaved: number;
+    hatTrick: boolean; gameWinningGoals: number; equalizerGoals: number;
+    matchRating: string | null; legacyPtsGained: number;
+  }
+
+  let best: BestPerf | null = null;
+
+  const BATCH_SIZE = 2;
+  for (let i = 0; i < targetFixtures.length; i += BATCH_SIZE) {
+    const batch = targetFixtures.slice(i, i + BATCH_SIZE);
+    const [eventsBatch, playerStatsBatch] = await Promise.all([
+      Promise.all(batch.map(f => getFixtureEvents(f.fixture.id))),
+      Promise.all(batch.map(f => getFixturePlayerStats(f.fixture.id))),
+    ]);
+    if (i + BATCH_SIZE < targetFixtures.length) {
+      await new Promise(r => setTimeout(r, 700));
+    }
+
+    for (let bi = 0; bi < batch.length; bi++) {
+      const fix = batch[bi];
+      const events = eventsBatch[bi];
+      const playerStats = playerStatsBatch[bi];
+
+      const homeTeamId = fix.teams.home.id;
+      const finalHome = fix.goals.home ?? 0;
+      const finalAway = fix.goals.away ?? 0;
+      const stageMultiplier = getStageMultiplier(fix.league.round);
+      const homeOQS = getOQS(fix.teams.away.name, standings);
+      const awayOQS = getOQS(fix.teams.home.name, standings);
+
+      const goals = classifyGoals(events, homeTeamId, finalHome, finalAway);
+
+      // Goals per player in this match
+      const goalsThisMatch = new Map<number, number>();
+      for (const g of goals) {
+        goalsThisMatch.set(g.scorerPlayerId, (goalsThisMatch.get(g.scorerPlayerId) ?? 0) + 1);
+      }
+
+      // ── Per-player accumulation for this single fixture ────────────────────
+      interface FixPerf {
+        name: string; teamName: string; teamLogo: string; position: string;
+        isHome: boolean; goals: number; assists: number;
+        gameWinningGoals: number; equalizerGoals: number;
+        cleanSheet: boolean; penaltiesSaved: number;
+        matchRating: string | null; legacyPts: number;
+      }
+      const perfMap = new Map<number, FixPerf>();
+
+      function getPerf(id: number, name: string, teamName: string, teamLogo: string, position: string, isHome: boolean): FixPerf {
+        if (!perfMap.has(id)) {
+          perfMap.set(id, { name, teamName, teamLogo, position, isHome, goals: 0, assists: 0, gameWinningGoals: 0, equalizerGoals: 0, cleanSheet: false, penaltiesSaved: 0, matchRating: null, legacyPts: 0 });
+        }
+        return perfMap.get(id)!;
+      }
+
+      // Score goals
+      for (const g of goals) {
+        const isHome = g.teamId === homeTeamId;
+        const oqs = isHome ? homeOQS : awayOQS;
+        const baseGoal = g.isPenalty ? 7 : 10;
+        const contextBonus = g.isEqualizer ? 6 : g.isGameWinner ? 8 : 0;
+        const pts = (baseGoal + contextBonus) * oqs * stageMultiplier;
+
+        const scorerPStats = playerStats.flatMap(t => t.players).find(p => p.player.id === g.scorerPlayerId);
+        const scorerTeamEntry = playerStats.find(t => t.players.some(p => p.player.id === g.scorerPlayerId));
+        const scorerTeamName = scorerTeamEntry?.team.name ?? (isHome ? fix.teams.home.name : fix.teams.away.name);
+        const scorerTeamLogo = scorerTeamEntry?.team.logo ?? teamLogoMap[scorerTeamName] ?? '';
+        const scorerPos = scorerPStats?.statistics[0]?.games.position ?? 'F';
+
+        const perf = getPerf(g.scorerPlayerId, g.scorerName, scorerTeamName, scorerTeamLogo, scorerPos, isHome);
+        perf.legacyPts += pts;
+        perf.goals += 1;
+        if (g.isGameWinner) perf.gameWinningGoals += 1;
+        if (g.isEqualizer) perf.equalizerGoals += 1;
+
+        // Assist
+        if (g.assistPlayerId) {
+          const baseAssist = g.isPenalty ? 1 : 6;
+          const assistBonus = (!g.isPenalty && (g.isEqualizer || g.isGameWinner)) ? 3 : 0;
+          const assistPts = (baseAssist + assistBonus) * oqs * stageMultiplier;
+          const aTeamEntry = playerStats.find(t => t.players.some(p => p.player.id === g.assistPlayerId));
+          const aTeamName = aTeamEntry?.team.name ?? scorerTeamName;
+          const aTeamLogo = aTeamEntry?.team.logo ?? teamLogoMap[aTeamName] ?? '';
+          const aPStats = playerStats.flatMap(t => t.players).find(p => p.player.id === g.assistPlayerId);
+          const aIsHome = aTeamEntry ? aTeamEntry.team.id === homeTeamId : isHome;
+          const aPerf = getPerf(g.assistPlayerId, g.assistName ?? '', aTeamName, aTeamLogo, aPStats?.statistics[0]?.games.position ?? 'M', aIsHome);
+          aPerf.legacyPts += assistPts;
+          aPerf.assists += 1;
+        }
+      }
+
+      // Hat trick bonus
+      for (const [pid, gc] of goalsThisMatch) {
+        if (gc >= 3) {
+          const p = perfMap.get(pid);
+          if (p) p.legacyPts += 15;
+        }
+      }
+
+      // Keeper/defender + ratings
+      for (const teamData of playerStats) {
+        const isHomeTeam = teamData.team.id === homeTeamId;
+        const oqs = isHomeTeam ? homeOQS : awayOQS;
+        const teamConceded = isHomeTeam ? finalAway : finalHome;
+        for (const { player, statistics } of teamData.players) {
+          const stat = statistics[0];
+          if (!stat) continue;
+          const mins = stat.games.minutes ?? 0;
+          if (mins === 0 && stat.games.substitute) continue;
+          const pos = stat.games.position;
+          const perf = getPerf(player.id, player.name, teamData.team.name, teamData.team.logo || teamLogoMap[teamData.team.name] || '', pos, isHomeTeam);
+          perf.matchRating = stat.games.rating;
+
+          if (pos === 'G') {
+            const pkSaved = stat.penalty.saved ?? 0;
+            const cs = teamConceded === 0 && mins >= 60;
+            if (cs) { perf.cleanSheet = true; perf.legacyPts += 8 * oqs * stageMultiplier; }
+            if (pkSaved > 0) { perf.penaltiesSaved += pkSaved; perf.legacyPts += pkSaved * 10 * oqs * stageMultiplier; }
+          } else if (pos === 'D') {
+            const cs = teamConceded === 0 && mins >= 60;
+            if (cs) { perf.cleanSheet = true; perf.legacyPts += 5 * oqs * stageMultiplier; }
+          }
+        }
+      }
+
+      // Find best performer in this fixture
+      for (const [pid, perf] of perfMap) {
+        if (perf.legacyPts <= 0) continue;
+        const hatTrick = (goalsThisMatch.get(pid) ?? 0) >= 3;
+        const isHomePerspective = perf.isHome;
+        const candidate: BestPerf = {
+          playerName: perf.name, teamName: perf.teamName, teamLogo: perf.teamLogo,
+          position: perf.position, isHome: isHomePerspective,
+          opponent: isHomePerspective ? fix.teams.away.name : fix.teams.home.name,
+          opponentLogo: isHomePerspective ? fix.teams.away.logo : fix.teams.home.logo,
+          homeScore: finalHome, awayScore: finalAway,
+          round: fix.league.round, stageMultiplier, matchDate: fix.fixture.date,
+          goals: perf.goals, assists: perf.assists, cleanSheet: perf.cleanSheet,
+          penaltiesSaved: perf.penaltiesSaved, hatTrick, gameWinningGoals: perf.gameWinningGoals,
+          equalizerGoals: perf.equalizerGoals, matchRating: perf.matchRating,
+          legacyPtsGained: Math.round(perf.legacyPts * 10) / 10,
+        };
+        if (!best || candidate.legacyPtsGained > best.legacyPtsGained) best = candidate;
+      }
+    }
+  }
+
+  if (!best) return null;
+
+  // ── Compute rank movement ──────────────────────────────────────────────────
+  // rankAfter: position in full leaderboard
+  const momentEntry = fullLeaderboard.find(e => e.name === best!.playerName);
+  const rankAfter = momentEntry?.rank ?? fullLeaderboard.length + 1;
+
+  // rankBefore: where they'd rank if today's pts subtracted
+  const adjusted = fullLeaderboard.map(e =>
+    e.name === best!.playerName
+      ? { ...e, legacyScore: Math.max(0, e.legacyScore - best!.legacyPtsGained) }
+      : e
+  ).sort((a, b) => b.legacyScore - a.legacyScore);
+  const rankBefore = adjusted.findIndex(e => e.name === best!.playerName) + 1;
+
+  return {
+    ...best,
+    rankBefore: rankBefore > 0 ? rankBefore : rankAfter,
+    rankAfter,
+    isTodayMoment,
+  };
 }

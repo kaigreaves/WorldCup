@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { subscribeReddit } from '../lib/reddit-store';
 import type { LegacyEntry } from '../lib/api';
@@ -83,6 +83,8 @@ export default function GreatnessLeaderboard({
   compact?: boolean;
 }) {
   const [ranked, setRanked] = useState<LegacyEntry[]>(entries);
+  const [collapsed, setCollapsed] = useState(false);
+  const titleRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     return subscribeReddit(data => {
@@ -90,22 +92,76 @@ export default function GreatnessLeaderboard({
     });
   }, [entries]);
 
+  useEffect(() => {
+    if (compact) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setCollapsed(!entry.isIntersecting),
+      { threshold: 0, rootMargin: '-100px 0px 0px 0px' }
+    );
+    if (titleRef.current) observer.observe(titleRef.current);
+    return () => observer.disconnect();
+  }, [compact]);
+
   return (
     <section>
-      <div style={{ marginBottom: compact ? '20px' : '2rem' }}>
-        <p className="label" style={{ marginBottom: '8px' }}>The Hierarchy</p>
-        <h2 style={{ fontSize: compact ? '1.3rem' : '2.5rem', color: 'var(--white)', margin: 0 }}>
+      {/* Collapsed title shown in nav bar area when scrolled past */}
+      {!compact && collapsed && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0, right: 0,
+          zIndex: 95,
+          height: 'calc(56px + env(safe-area-inset-top))',
+          display: 'flex',
+          alignItems: 'flex-end',
+          justifyContent: 'center',
+          paddingBottom: '10px',
+          paddingTop: 'env(safe-area-inset-top)',
+          pointerEvents: 'none',
+        }}>
+          <span style={{
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            fontSize: '17px', fontWeight: 600, letterSpacing: '-0.01em',
+            color: 'var(--white)',
+          }}>
+            Legacy Leaderboard
+          </span>
+        </div>
+      )}
+
+      <div ref={titleRef} style={{ marginBottom: compact ? '20px' : '28px' }}>
+        <p className="label" style={{ marginBottom: '6px' }}>The Hierarchy</p>
+        <h2 style={{
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          fontSize: compact ? '1.3rem' : '34px',
+          fontWeight: compact ? 500 : 700,
+          letterSpacing: '-0.02em',
+          color: 'var(--white)',
+          margin: 0,
+          lineHeight: 1.1,
+          transition: 'opacity 0.2s ease',
+          opacity: collapsed ? 0.3 : 1,
+        }}>
           Legacy Leaderboard
         </h2>
-        <div className="gold-line" style={{ marginTop: '12px' }} />
+        <div className="gold-line" style={{ marginTop: '14px' }} />
       </div>
 
       {ranked.length === 0 ? (
         <p style={{ color: 'var(--muted)', fontStyle: 'italic', fontSize: '13px' }}>Tournament data loading.</p>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+        <div style={{
+          background: 'rgba(255,255,255,0.04)',
+          borderRadius: compact ? '12px' : '16px',
+          overflow: 'hidden',
+          border: '0.5px solid rgba(255,255,255,0.08)',
+        }}>
           {ranked.map((entry, i) => (
-            <LeaderboardRow key={entry.playerId} entry={entry} highlight={i < 3} compact={compact} />
+            <div key={entry.playerId} style={{
+              borderBottom: i < ranked.length - 1 ? '0.5px solid rgba(255,255,255,0.06)' : 'none',
+            }}>
+              <LeaderboardRow entry={entry} highlight={i < 3} compact={compact} />
+            </div>
           ))}
         </div>
       )}
@@ -128,24 +184,25 @@ function LeaderboardRow({
   return (
     <div className="lb-row" style={{
       display: 'grid',
-      gridTemplateColumns: compact ? '24px 1fr auto' : '44px 1fr auto',
+      gridTemplateColumns: compact ? '24px 1fr auto' : '52px 1fr auto',
       alignItems: 'center',
-      gap: compact ? '8px' : '14px',
-      padding: compact ? '9px 10px' : '14px 16px',
-      background: highlight ? 'rgba(201,168,76,0.06)' : 'transparent',
+      gap: compact ? '8px' : '16px',
+      padding: compact ? '9px 10px' : '16px 16px',
+      background: highlight ? 'rgba(201,168,76,0.05)' : 'transparent',
       borderLeft: highlight ? '2px solid var(--gold)' : '2px solid transparent',
     }}>
 
       {/* Rank */}
       <span style={{
         fontFamily: 'system-ui, -apple-system, sans-serif',
-        fontSize: compact ? '0.85rem' : '2rem',
-        fontWeight: 300,
+        fontSize: compact ? '0.85rem' : '2.4rem',
+        fontWeight: 200,
         color: 'var(--gold)',
         opacity: highlight ? 0.7 : 0.3,
         lineHeight: 1,
         textAlign: 'center',
         flexShrink: 0,
+        fontVariantNumeric: 'tabular-nums',
       }}>
         {entry.rank}
       </span>
@@ -214,6 +271,7 @@ function LeaderboardRow({
           fontWeight: 300,
           color: 'var(--gold)',
           lineHeight: 1,
+          fontVariantNumeric: 'tabular-nums',
         }}>
           {entry.legacyScore}
         </div>

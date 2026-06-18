@@ -12,11 +12,12 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        // Force browsers (including iOS PWA) to always revalidate the HTML page.
-        // Without this, iOS home-screen apps serve stale cached HTML indefinitely.
+        // s-maxage: Vercel CDN edge caches the ISR output for 60 s.
+        // stale-while-revalidate: CDN serves stale HTML while regenerating in background.
+        // no-cache: browsers must revalidate — prevents iOS PWA from serving stale HTML.
         source: '/',
         headers: [
-          { key: 'Cache-Control', value: 'no-cache, must-revalidate' },
+          { key: 'Cache-Control', value: 'public, s-maxage=60, stale-while-revalidate=120, no-cache' },
         ],
       },
     ];

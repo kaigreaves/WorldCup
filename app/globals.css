@@ -67,17 +67,15 @@ h1, h2, h3 {
 /* ── Cards ──────────────────────────────────────────────────────────────────── */
 
 .card {
-  background: rgba(0, 23, 68, 0.6);
-  border: 1px solid var(--gold-border);
-  border-radius: 12px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255,255,255,0.05);
+  border: 0.5px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
   transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
 .card:hover {
-  border-color: rgba(201,168,76,0.4);
-  box-shadow: 0 8px 40px rgba(0,0,0,0.35), 0 0 0 1px rgba(201,168,76,0.08);
+  border-color: rgba(201,168,76,0.35);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.35);
 }
 
 /* ── Liquid Glass surface ────────────────────────────────────────────────────── */
@@ -152,9 +150,24 @@ h1, h2, h3 {
 .animate-fade-up  { animation: fadeUp  0.4s cubic-bezier(0.16,1,0.3,1) both; }
 .animate-fade-in  { animation: fadeIn  0.3s ease both; }
 
-/* Panel content fade when switching tabs */
+/* Panel content slide when switching tabs */
+@keyframes slideInFromRight {
+  from { opacity: 0; transform: translateX(32px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideInFromLeft {
+  from { opacity: 0; transform: translateX(-32px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
 .section-panel-content {
-  animation: fadeUp 0.35s cubic-bezier(0.16,1,0.3,1) both;
+  animation: fadeUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94) both;
+}
+.section-panel-content.slide-right {
+  animation: slideInFromRight 0.3s cubic-bezier(0.25,0.46,0.45,0.94) both;
+}
+.section-panel-content.slide-left {
+  animation: slideInFromLeft 0.3s cubic-bezier(0.25,0.46,0.45,0.94) both;
 }
 
 /* ── Nav links ────────────────────────────────────────────────────────────── */
@@ -180,46 +193,57 @@ nav a:hover { color: var(--gold) !important; }
 
 .bottom-nav {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 62px;
-  /* Liquid Glass: highly transparent, heavy blur, picks up content behind */
-  background: rgba(0, 8, 22, 0.38);
+  bottom: calc(env(safe-area-inset-bottom) + 10px);
+  left: 14px;
+  right: 14px;
+  height: 60px;
+  background: rgba(0, 8, 22, 0.72);
   backdrop-filter: blur(48px) saturate(220%) brightness(1.1);
   -webkit-backdrop-filter: blur(48px) saturate(220%) brightness(1.1);
-  /* Specular highlight on top edge, subtle inner glow */
-  border-top: 0.5px solid rgba(255,255,255,0.22);
+  border: 0.5px solid rgba(255,255,255,0.18);
+  border-radius: 22px;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.1),
-    0 -1px 24px rgba(0,0,0,0.18);
+    0 8px 32px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.12);
   display: flex;
+  align-items: center;
   z-index: 300;
-  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .bottom-nav-btn {
   flex: 1;
   background: none;
   border: none;
-  border-top: 1.5px solid transparent;
   cursor: pointer;
-  font-size: 9px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 4px;
+  color: rgba(255,255,255,0.4);
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
-  font-weight: 400;
-  padding: 0 4px;
-  transition: color 0.2s ease, border-color 0.2s ease;
+  transition: color 0.2s ease;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
+  height: 100%;
+}
+
+.bottom-nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.bottom-nav-label {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 .bottom-nav-btn.active {
   color: var(--gold);
-  border-top-color: var(--gold);
-  font-weight: 500;
 }
 
 /* ── Group standings tab buttons ─────────────────────────────────────────── */
@@ -329,14 +353,14 @@ header {
 
 .comment-block {
   background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 10px;
-  padding: 12px 14px;
+  border: 0.5px solid rgba(255,255,255,0.09);
+  border-radius: 12px;
+  padding: 14px 16px;
   transition: background 0.2s ease;
 }
 
 .comment-block:hover {
-  background: rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.07);
 }
 
 /* ── Score ticker ─────────────────────────────────────────────────────────── */
@@ -361,6 +385,6 @@ header {
 
 .lb-row {
   transition: background 0.18s ease;
-  border-radius: 8px;
+  border-radius: 12px;
 }
-.lb-row:hover { background: rgba(201,168,76,0.07) !important; }
+.lb-row:hover { background: rgba(255,255,255,0.05) !important; }

@@ -1,9 +1,11 @@
+import { unstable_cache } from 'next/cache';
 import {
   getFixtures,
   getTopScorers,
   getTopAssists,
   getStandings,
   computeLegacyLeaderboard,
+  computeLegacyMoment,
   buildTeamFlagMap,
   buildTeamRankMap,
   PLAYER_TEAM_MAP,
@@ -11,6 +13,28 @@ import {
   getFinishedFixtures,
   getLiveFixtures,
 } from './lib/api';
+
+// ISR: page is statically cached and served from Vercel CDN. The lambda runs
+// at most once per 60 s in the background — all 100 k concurrent users hit the
+// edge cache, not the origin.
+export const revalidate = 60;
+
+// computeLegacyMoment makes 20+ sequential API calls. Isolate it in its own
+// 5-minute server-side cache so it doesn't block every 60-second page revalidation.
+// unstable_cache shares the result across all Lambda instances — no HTTP round-trip.
+const getLegacyMomentCached = unstable_cache(
+  async () => {
+    const [fixtures, scorers, assists, standings] = await Promise.all([
+      getFixtures(), getTopScorers(), getTopAssists(), getStandings(),
+    ]);
+    const allFixtures = fixtures ?? [];
+    const entries = await computeLegacyLeaderboard(allFixtures, scorers ?? [], assists ?? [], standings);
+    return computeLegacyMoment(allFixtures, standings, entries);
+  },
+  ['legacy-moment'],
+  { revalidate: 300 },
+);
+
 import Image from 'next/image';
 import GreatnessLeaderboard from './components/GreatnesLeaderboard';
 import GroupStandings from './components/GroupStandings';
@@ -18,6 +42,7 @@ import Matches from './components/Matches';
 import SectionPanel from './components/SectionPanel';
 import MatchTicker from './components/MatchTicker';
 import RecapBanner from './components/RecapBanner';
+import LegacyMomentSplash from './components/LegacyMomentSplash';
 import { RedditDataLoader, PerformersSection, FanVoiceSection, TournamentFavourites } from './components/RedditShell';
 
 export default async function Page() {
@@ -33,6 +58,7 @@ export default async function Page() {
   const allAssists = assists ?? [];
 
   const legacyEntries = await computeLegacyLeaderboard(allFixtures, allScorers, allAssists, standings);
+  const legacyMoment = await getLegacyMomentCached();
 
   const teamFlagMap = buildTeamFlagMap(allFixtures);
   const teamRanks = buildTeamRankMap(standings);
@@ -61,15 +87,12 @@ export default async function Page() {
     ...upcomingMatches.map(f => ({ homeTeam: f.teams.home.name, awayTeam: f.teams.away.name, isFinished: false })),
   ];
 
-  const today = new Date().toLocaleDateString('en-GB', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-  });
-
   const matchesPlayed = allFixtures.filter(f => f.fixture.status.short === 'FT').length;
   const isLive = liveMatches.length > 0;
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--navy)' }}>
+      {legacyMoment && <LegacyMomentSplash moment={legacyMoment} />}
 
       {/* Header */}
       <header style={{
@@ -91,48 +114,36 @@ export default async function Page() {
             height={28}
             style={{ height: '28px', width: 'auto', objectFit: 'contain' }}
           />
-          <div style={{
-            fontFamily: 'system-ui, -apple-system, sans-serif',
-            fontSize: '1.1rem',
-            fontWeight: 500,
-            letterSpacing: '0.08em',
-            color: 'var(--white)',
-          }}>
-            Legacy Tracker
+          <div>
+            <div style={{
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              fontSize: '17px',
+              fontWeight: 600,
+              letterSpacing: '-0.01em',
+              color: 'var(--white)',
+              lineHeight: 1.2,
+            }}>
+              Legacy Tracker
+            </div>
+            <div style={{
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              fontSize: '11px',
+              fontWeight: 400,
+              color: 'var(--gold)',
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+            }}>
+              FIFA World Cup 2026
+            </div>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          {isLive && (
-            <span style={{ fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#4ade80', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
-              Live
-            </span>
-          )}
-          <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{today}</span>
-        </div>
+        {isLive && (
+          <span style={{ fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 500 }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ade80', display: 'inline-block', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
+            Live
+          </span>
+        )}
       </header>
-
-      {/* Quote — always visible, above the ticker */}
-      <div style={{
-        borderBottom: '1px solid var(--gold-border)',
-        padding: '9px clamp(20px, 4vw, 40px)',
-        background: 'rgba(201,168,76,0.04)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-      }}>
-        <div style={{ width: '2px', height: '28px', background: 'var(--gold)', opacity: 0.5, flexShrink: 0 }} />
-        <p style={{
-          fontFamily: 'system-ui, -apple-system, sans-serif',
-          fontSize: '0.85rem',
-          fontStyle: 'italic',
-          color: 'rgba(255,255,255,0.55)',
-          margin: 0,
-          lineHeight: 1.5,
-        }}>
-          It is not the critic who counts. It is the man in the arena.
-        </p>
-      </div>
 
       {/* Score ticker */}
       <MatchTicker fixtures={allFixtures} />
@@ -157,7 +168,7 @@ export default async function Page() {
       </div>
 
       {/* Main */}
-      <main style={{ padding: '0 0 calc(62px + env(safe-area-inset-bottom))' }}>
+      <main style={{ padding: '0 0 calc(80px + env(safe-area-inset-bottom))' }}>
         <RedditDataLoader fixtures={fixturesForReddit} />
 
         <SectionPanel>
@@ -182,7 +193,7 @@ export default async function Page() {
             <div key="buzzing" style={{ padding: '32px clamp(16px, 4vw, 40px) 40px' }}>
               <div style={{ marginBottom: '32px' }}>
                 <p className="label" style={{ marginBottom: '6px' }}>Fan Pulse</p>
-                <h2 style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '2rem', color: 'var(--white)', margin: '0 0 10px 0', fontWeight: 300 }}>
+                <h2 style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '34px', color: 'var(--white)', margin: '0 0 10px 0', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
                   Who&apos;s Buzzing?
                 </h2>
                 <div className="gold-line" />

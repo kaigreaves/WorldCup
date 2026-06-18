@@ -24,11 +24,23 @@ function formatDate(utcDate: string) {
   };
 }
 
-function TeamBadge({ team, dim }: { team: ApiFixture['teams']['home']; dim?: boolean }) {
+function TeamBadge({ team, dim, align = 'left' }: { team: ApiFixture['teams']['home']; dim?: boolean; align?: 'left' | 'right' }) {
+  const isRight = align === 'right';
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, opacity: dim ? 0.45 : 1 }}>
-      {team.logo && <Image src={team.logo} alt={team.name} width={28} height={28} style={{ objectFit: 'contain' }} />}
-      <span style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '1.05rem', color: 'var(--white)', whiteSpace: 'nowrap' }}>
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0,
+      opacity: dim ? 0.4 : 1,
+      flexDirection: isRight ? 'row-reverse' : 'row',
+      justifyContent: isRight ? 'flex-end' : 'flex-start',
+    }}>
+      {team.logo && <Image src={team.logo} alt={team.name} width={26} height={26} style={{ objectFit: 'contain', flexShrink: 0 }} />}
+      <span style={{
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        fontSize: '0.95rem', fontWeight: 500,
+        color: 'var(--white)',
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        textAlign: isRight ? 'right' : 'left',
+      }}>
         {team.name}
       </span>
     </div>
@@ -41,7 +53,7 @@ function LiveCard({ fix }: { fix: ApiFixture }) {
   const elapsed = fix.fixture.status.elapsed;
   const statusLabel = fix.fixture.status.short === 'HT' ? 'Half Time' : elapsed ? `${elapsed}'` : fix.fixture.status.short;
   return (
-    <div className="card" style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '20px', borderColor: 'rgba(237,41,57,0.4)' }}>
+    <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', borderColor: 'rgba(237,41,57,0.4)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <p className="label" style={{ marginBottom: '4px' }}>{fix.league.round}</p>
@@ -51,14 +63,14 @@ function LiveCard({ fix }: { fix: ApiFixture }) {
           <span style={{ fontSize: '12px', color: 'var(--red)', fontWeight: 600, letterSpacing: '0.1em' }}>{statusLabel}</span>
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <TeamBadge team={fix.teams.home} />
-        <div style={{ textAlign: 'center', minWidth: '80px', flexShrink: 0 }}>
-          <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '2.5rem', fontWeight: 300, color: 'var(--white)', lineHeight: 1, letterSpacing: '0.05em' }}>
-            {home} <span style={{ color: 'var(--red)', opacity: 0.7 }}>—</span> {away}
+        <div style={{ textAlign: 'center', minWidth: '66px', flexShrink: 0 }}>
+          <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '2rem', fontWeight: 300, color: 'var(--white)', lineHeight: 1, letterSpacing: '0.06em' }}>
+            {home}<span style={{ color: 'var(--red)', opacity: 0.6, margin: '0 2px' }}>–</span>{away}
           </div>
         </div>
-        <TeamBadge team={fix.teams.away} />
+        <TeamBadge team={fix.teams.away} align="right" />
       </div>
       <MatchFanComments
         homeTeam={fix.teams.home.name}
@@ -73,7 +85,7 @@ function LiveCard({ fix }: { fix: ApiFixture }) {
 function UpcomingCard({ fix }: { fix: ApiFixture }) {
   const { date, time } = formatDate(fix.fixture.date);
   return (
-    <div className="card" style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <p className="label" style={{ marginBottom: '4px' }}>{fix.league.round}</p>
@@ -85,10 +97,10 @@ function UpcomingCard({ fix }: { fix: ApiFixture }) {
           </span>
         )}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <TeamBadge team={fix.teams.home} />
-        <span style={{ color: 'var(--gold)', fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '1.1rem', flexShrink: 0 }}>vs</span>
-        <TeamBadge team={fix.teams.away} />
+        <span style={{ color: 'var(--muted)', fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '13px', flexShrink: 0, letterSpacing: '0.06em' }}>vs</span>
+        <TeamBadge team={fix.teams.away} align="right" />
       </div>
       <MatchFanComments
         homeTeam={fix.teams.home.name}
@@ -115,7 +127,7 @@ function FinishedCard({ fix, teamRanks = {} }: { fix: ApiFixture; teamRanks?: Re
   );
 
   return (
-    <div className="card" style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
         <div>
           <p className="label" style={{ marginBottom: '4px' }}>{fix.league.round}</p>
@@ -132,17 +144,17 @@ function FinishedCard({ fix, teamRanks = {} }: { fix: ApiFixture; teamRanks?: Re
           </span>
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <TeamBadge team={fix.teams.home} dim={fix.teams.away.winner === true} />
-        <div style={{ textAlign: 'center', minWidth: '80px', flexShrink: 0 }}>
+        <div style={{ textAlign: 'center', minWidth: '66px', flexShrink: 0 }}>
           <div style={{
-            fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '2.5rem', fontWeight: 300,
-            color: 'var(--white)', lineHeight: 1, letterSpacing: '0.05em',
+            fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '2rem', fontWeight: 300,
+            color: 'var(--white)', lineHeight: 1, letterSpacing: '0.06em', fontVariantNumeric: 'tabular-nums',
           }}>
-            {home} <span style={{ color: 'var(--gold)', opacity: 0.5 }}>—</span> {away}
+            {home}<span style={{ color: 'var(--gold)', opacity: 0.45, margin: '0 2px' }}>–</span>{away}
           </div>
         </div>
-        <TeamBadge team={fix.teams.away} dim={fix.teams.home.winner === true} />
+        <TeamBadge team={fix.teams.away} dim={fix.teams.home.winner === true} align="right" />
       </div>
       <MatchFanComments
         homeTeam={fix.teams.home.name}
@@ -192,7 +204,7 @@ export default function Matches({ upcoming, finished, live, teamRanks = {} }: Pr
       <section>
         <div className="mb-8">
           <p className="label mb-3">The Stage</p>
-          <h2 style={{ fontSize: '2.5rem', color: 'var(--white)' }}>Matches</h2>
+          <h2 style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '34px', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.1, color: 'var(--white)', margin: 0 }}>Matches</h2>
           <div className="gold-line mt-4" />
         </div>
         <p style={{ color: 'var(--muted)', fontStyle: 'italic' }}>Match data will appear as the tournament gets underway.</p>
@@ -205,7 +217,7 @@ export default function Matches({ upcoming, finished, live, teamRanks = {} }: Pr
       <LiveRefresher hasLive={hasLive} />
       <div className="mb-8">
         <p className="label mb-3">The Stage</p>
-        <h2 style={{ fontSize: '2.5rem', color: 'var(--white)' }}>Matches</h2>
+        <h2 style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '34px', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.1, color: 'var(--white)', margin: 0 }}>Matches</h2>
         <div className="gold-line mt-4" />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>

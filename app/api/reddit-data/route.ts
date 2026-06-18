@@ -21,7 +21,11 @@ export async function GET() {
     ];
 
     const data = await fetchRedditData(fixtures);
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=1800, stale-while-revalidate=3600',
+      },
+    });
   } catch (err) {
     console.error('[reddit-data] fetch failed:', err);
     return NextResponse.json({ error: 'Failed to fetch Reddit data' }, { status: 500 });
