@@ -14,6 +14,27 @@ function hasApiError(errors: unknown): boolean {
   return Array.isArray(errors) ? errors.length > 0 : Object.keys(errors).length > 0;
 }
 
+// ── API quota tracker ─────────────────────────────────────────────────────────
+// api-sports returns X-RateLimit-Requests-Limit and X-RateLimit-Requests-Remaining
+// on every response. We log a warning when remaining calls are low so we can
+// catch overages before they happen. Logs appear in Vercel Function logs.
+
+function logQuota(res: Response, path: string) {
+  const limit     = res.headers.get('X-RateLimit-Requests-Limit');
+  const remaining = res.headers.get('X-RateLimit-Requests-Remaining');
+  if (!limit || !remaining) return;
+  const used = parseInt(limit) - parseInt(remaining);
+  const pct  = Math.round((used / parseInt(limit)) * 100);
+
+  if (parseInt(remaining) <= 10) {
+    console.error(`[API-SPORTS] ⚠️  CRITICAL: only ${remaining}/${limit} calls left today (${pct}% used) — ${path}`);
+  } else if (parseInt(remaining) <= 25) {
+    console.warn(`[API-SPORTS] ⚠️  LOW: ${remaining}/${limit} calls remaining (${pct}% used) — ${path}`);
+  } else {
+    console.log(`[API-SPORTS] quota: ${remaining}/${limit} remaining (${pct}% used) — ${path}`);
+  }
+}
+
 async function apiFetch<T>(path: string, revalidate = 300): Promise<T | null> {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
@@ -24,6 +45,7 @@ async function apiFetch<T>(path: string, revalidate = 300): Promise<T | null> {
       // else on the page, not just this one call).
       const reqHeaders = attempt === 0 ? headers : { ...headers, 'X-Retry-Attempt': String(Date.now()) };
       const res = await fetch(`${BASE}${path}`, { headers: reqHeaders, next: { revalidate } });
+      logQuota(res, path);
       if (!res.ok) return null;
       const json = await res.json() as { response: T; errors?: unknown };
       if (hasApiError(json.errors)) {
