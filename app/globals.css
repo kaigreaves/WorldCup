@@ -164,6 +164,17 @@ body {
    LIQUID GLASS SURFACES
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* Live card: pulsing red border */
+.card-live {
+  border-color: rgba(237,41,57,0.4) !important;
+  animation: borderPulse 2.2s ease-in-out infinite;
+}
+
+@keyframes borderPulse {
+  0%, 100% { border-color: rgba(237,41,57,0.25); }
+  50%       { border-color: rgba(237,41,57,0.65); }
+}
+
 .card {
   background: var(--glass-bg-2);
   backdrop-filter: var(--glass-blur-2);

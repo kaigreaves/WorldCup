@@ -65,8 +65,10 @@ export default function RecapBanner({ fixtures }: { fixtures: ApiFixture[] }) {
 
   return (
     <div style={{
-      background: 'rgba(212,175,55,0.07)',
-      borderBottom: '1px solid var(--gold-border)',
+      background: 'rgba(201,168,76,0.05)',
+      backdropFilter: 'blur(20px) saturate(160%)',
+      WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+      borderBottom: '0.5px solid rgba(201,168,76,0.2)',
       padding: '10px clamp(20px, 4vw, 40px)',
       display: 'flex',
       alignItems: 'center',

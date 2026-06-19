@@ -53,7 +53,7 @@ function LiveCard({ fix }: { fix: ApiFixture }) {
   const elapsed = fix.fixture.status.elapsed;
   const statusLabel = fix.fixture.status.short === 'HT' ? 'Half Time' : elapsed ? `${elapsed}'` : fix.fixture.status.short;
   return (
-    <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', borderColor: 'rgba(237,41,57,0.4)' }}>
+    <div className="card card-live" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <p className="label" style={{ marginBottom: '4px' }}>{fix.league.round}</p>
@@ -149,9 +149,11 @@ function FinishedCard({ fix, teamRanks = {} }: { fix: ApiFixture; teamRanks?: Re
         <div style={{ textAlign: 'center', minWidth: '66px', flexShrink: 0 }}>
           <div style={{
             fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '2rem', fontWeight: 700,
-            color: 'var(--white)', lineHeight: 1, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums',
+            lineHeight: 1, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums',
           }}>
-            {home}<span style={{ color: 'var(--gold)', opacity: 0.4, margin: '0 3px', fontWeight: 300 }}>–</span>{away}
+            <span style={{ color: fix.teams.away.winner ? 'rgba(255,255,255,0.28)' : 'var(--white)' }}>{home}</span>
+            <span style={{ color: 'var(--gold)', opacity: 0.4, margin: '0 3px', fontWeight: 300 }}>–</span>
+            <span style={{ color: fix.teams.home.winner ? 'rgba(255,255,255,0.28)' : 'var(--white)' }}>{away}</span>
           </div>
         </div>
         <TeamBadge team={fix.teams.away} dim={fix.teams.home.winner === true} align="right" />
@@ -223,7 +225,7 @@ export default function Matches({ upcoming, finished, live, teamRanks = {} }: Pr
       <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
         {groups.map(g => (
           <div key={g.label}>
-            <p style={{ fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: g.color, marginBottom: '20px' }}>{g.label}</p>
+            <p className="section-eyebrow" style={{ color: g.color, marginBottom: '20px' }}>{g.label}</p>
             <div style={grid}>
               {g.items.map(f =>
                 g.type === 'live' ? <LiveCard key={f.fixture.id} fix={f} /> :

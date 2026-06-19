@@ -99,6 +99,31 @@ function timeAgo(iso: string): string {
 
 const RANK_STORE_KEY = 'legacy_ranks_v1';
 
+// ── Daily rank delta — snapshot at start of each day ─────────────────────────
+
+function todayKey(): string { return new Date().toISOString().slice(0, 10); }
+function yesterdayKey(): string {
+  const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().slice(0, 10);
+}
+function loadDailySnapshot(dateKey: string): Record<string, number> {
+  try { return JSON.parse(localStorage.getItem(`legacy_snap_${dateKey}`) ?? '{}'); } catch { return {}; }
+}
+function saveDailySnapshot(ranked: LegacyEntry[]) {
+  try {
+    const map: Record<string, number> = {};
+    ranked.forEach(e => { map[e.name] = e.rank; });
+    localStorage.setItem(`legacy_snap_${todayKey()}`, JSON.stringify(map));
+    // Clean up snapshots older than 7 days
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7);
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k?.startsWith('legacy_snap_') && k.slice(12) < cutoff.toISOString().slice(0, 10)) {
+        localStorage.removeItem(k);
+      }
+    }
+  } catch {}
+}
+
 function loadStoredRanks(): Record<string, number> {
   try { return JSON.parse(localStorage.getItem(RANK_STORE_KEY) ?? '{}'); } catch { return {}; }
 }
@@ -146,6 +171,7 @@ export default function GreatnessLeaderboard({
 }) {
   const [ranked, setRanked] = useState<LegacyEntry[]>(entries);
   const [buzzBonuses, setBuzzBonuses] = useState<Map<number, number>>(new Map());
+  const [dailyDeltas, setDailyDeltas] = useState<Map<number, number>>(new Map());
   const [collapsed, setCollapsed] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<LegacyEntry | null>(null);
   const titleRef = useRef<HTMLDivElement>(null);
@@ -171,11 +197,20 @@ export default function GreatnessLeaderboard({
   useEffect(() => { requestNotificationPermission(); }, []);
 
   useEffect(() => {
+    const yesterday = loadDailySnapshot(yesterdayKey());
     return subscribeReddit(data => {
       const { ranked: newRanked, bonuses } = applyBuzzModifier(entries, data.tournamentFavourites);
+
+      // Daily deltas: compare to yesterday's snapshot, show only climbers (▲N)
+      const deltas = new Map<number, number>();
+      newRanked.forEach(e => {
+        const prevRank = yesterday[e.name];
+        if (prevRank && prevRank > e.rank) deltas.set(e.playerId, prevRank - e.rank);
+      });
+      setDailyDeltas(deltas);
+      saveDailySnapshot(newRanked);
+
       if (sessionReady.current) {
-        // Only compare after the first load — avoids firing on page-load
-        // when localStorage has stale ranks from a previous session.
         const prev = loadStoredRanks();
         notifyClimbs(newRanked, prev);
       }
@@ -280,7 +315,7 @@ export default function GreatnessLeaderboard({
                 cursor: 'pointer',
               }}
             >
-              <LeaderboardRow entry={entry} highlight={i < 3} compact={compact} buzzBonus={buzzBonuses.get(entry.playerId) ?? 0} />
+              <LeaderboardRow entry={entry} highlight={i < 3} compact={compact} buzzBonus={buzzBonuses.get(entry.playerId) ?? 0} dailyDelta={dailyDeltas.get(entry.playerId) ?? 0} />
             </div>
           ))}
           {computedAt && !compact && (
@@ -348,11 +383,13 @@ function LeaderboardRow({
   highlight,
   compact,
   buzzBonus,
+  dailyDelta,
 }: {
   entry: LegacyEntry;
   highlight: boolean;
   compact: boolean;
   buzzBonus: number;
+  dailyDelta: number;
 }) {
   const topStats = getTopStats(entry);
   const pos = posLabel(entry.position);
@@ -370,19 +407,28 @@ function LeaderboardRow({
     }}>
 
       {/* Rank */}
-      <span style={{
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        fontSize: compact ? '0.85rem' : '2.4rem',
-        fontWeight: 200,
-        color: 'var(--gold)',
-        opacity: highlight ? 0.7 : 0.3,
-        lineHeight: 1,
-        textAlign: 'center',
-        flexShrink: 0,
-        fontVariantNumeric: 'tabular-nums',
-      }}>
-        {entry.rank}
-      </span>
+      <div style={{ textAlign: 'center', flexShrink: 0 }}>
+        <span style={{
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          fontSize: compact ? '0.85rem' : '2.4rem',
+          fontWeight: 200,
+          color: 'var(--gold)',
+          opacity: highlight ? 0.7 : 0.3,
+          lineHeight: 1,
+          display: 'block',
+          fontVariantNumeric: 'tabular-nums',
+        }}>
+          {entry.rank}
+        </span>
+        {!compact && dailyDelta > 0 && (
+          <span style={{
+            fontSize: '8px', fontWeight: 700, color: '#4ade80',
+            letterSpacing: '0.02em', lineHeight: 1,
+          }}>
+            ▲{dailyDelta}
+          </span>
+        )}
+      </div>
 
       {/* Player info */}
       <div style={{ minWidth: 0 }}>
