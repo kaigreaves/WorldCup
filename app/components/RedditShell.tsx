@@ -174,10 +174,12 @@ export function PerformersSection({ headless, playerMeta = {} }: { headless?: bo
             const isStar = i === 0;
             return (
               <div key={p.name} style={{
-                background: isStar ? 'var(--navy-3)' : 'var(--navy-2)',
-                border: isStar ? '1px solid var(--gold)' : '1px solid var(--gold-border)',
-                borderRadius: '2px', padding: '24px', position: 'relative', overflow: 'hidden',
-                boxShadow: isStar ? '0 0 24px rgba(201,168,76,0.12)' : 'none',
+                background: isStar ? 'rgba(201,168,76,0.05)' : 'rgba(255,255,255,0.03)',
+                backdropFilter: 'blur(20px) saturate(160%)',
+                WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+                border: isStar ? '0.5px solid rgba(201,168,76,0.35)' : '0.5px solid rgba(255,255,255,0.08)',
+                borderRadius: '16px', padding: '20px', position: 'relative', overflow: 'hidden',
+                boxShadow: isStar ? '0 4px 24px rgba(0,0,0,0.2), 0 0 0 0.5px rgba(201,168,76,0.1) inset' : '0 2px 12px rgba(0,0,0,0.15)',
               }}>
                 {isStar && (
                   <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'linear-gradient(to right, var(--gold), transparent)' }} />

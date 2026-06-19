@@ -277,7 +277,7 @@ export default function GreatnessLeaderboard({
           ))}
           {computedAt && !compact && (
             <div style={{ padding: '8px 16px', borderTop: '0.5px solid rgba(255,255,255,0.04)' }}>
-              <span style={{ fontSize: '9px', color: 'var(--muted-2)', letterSpacing: '0.08em' }}>
+              <span style={{ fontSize: '9px', color: 'var(--muted-2)', letterSpacing: '-0.01em', fontVariantNumeric: 'tabular-nums' } as React.CSSProperties}>
                 Updated {timeAgo(computedAt)}
               </span>
             </div>
@@ -326,8 +326,8 @@ function LeaderboardRow({
       gridTemplateColumns: compact ? '24px 1fr auto' : '52px 1fr auto',
       alignItems: 'center',
       gap: compact ? '8px' : '16px',
-      padding: compact ? '9px 10px' : '16px 20px',
-      background: highlight ? 'rgba(201,168,76,0.042)' : 'transparent',
+      padding: compact ? '9px 10px' : highlight ? '20px 20px' : '15px 20px',
+      background: highlight ? 'rgba(201,168,76,0.06)' : 'transparent',
       borderLeft: `2px solid ${highlight ? 'var(--gold)' : 'transparent'}`,
     }}>
 
@@ -377,8 +377,8 @@ function LeaderboardRow({
             letterSpacing: '0.12em',
             color: entry.position === 'G' ? '#4ade80' : entry.position === 'D' ? '#93c5fd' : 'rgba(255,255,255,0.38)',
             border: `0.5px solid ${entry.position === 'G' ? 'rgba(74,222,128,0.28)' : entry.position === 'D' ? 'rgba(147,197,253,0.28)' : 'rgba(255,255,255,0.15)'}`,
-            padding: '1px 4px',
-            borderRadius: '3px',
+            padding: '1px 5px',
+            borderRadius: '999px',
             flexShrink: 0,
             lineHeight: 1.5,
           }}>

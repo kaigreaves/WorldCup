@@ -66,8 +66,8 @@ function LiveCard({ fix }: { fix: ApiFixture }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <TeamBadge team={fix.teams.home} />
         <div style={{ textAlign: 'center', minWidth: '66px', flexShrink: 0 }}>
-          <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '2rem', fontWeight: 300, color: 'var(--white)', lineHeight: 1, letterSpacing: '0.06em' }}>
-            {home}<span style={{ color: 'var(--red)', opacity: 0.6, margin: '0 2px' }}>–</span>{away}
+          <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '2rem', fontWeight: 700, color: 'var(--white)', lineHeight: 1, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
+            {home}<span style={{ color: 'var(--red)', opacity: 0.5, margin: '0 3px', fontWeight: 300 }}>–</span>{away}
           </div>
         </div>
         <TeamBadge team={fix.teams.away} align="right" />
@@ -135,11 +135,11 @@ function FinishedCard({ fix, teamRanks = {} }: { fix: ApiFixture; teamRanks?: Re
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', paddingTop: '2px' }}>
           {isUpset && (
-            <span style={{ fontSize: '9px', letterSpacing: '0.15em', color: 'var(--red)', textTransform: 'uppercase', border: '1px solid rgba(237,41,57,0.35)', padding: '2px 6px', borderRadius: '1px' }}>
+            <span style={{ fontSize: '9px', letterSpacing: '0.12em', color: 'var(--red)', textTransform: 'uppercase', border: '0.5px solid rgba(237,41,57,0.35)', padding: '2px 8px', borderRadius: '999px', background: 'rgba(237,41,57,0.07)' }}>
               Upset
             </span>
           )}
-          <span style={{ fontSize: '10px', letterSpacing: '0.15em', color: 'var(--muted)', textTransform: 'uppercase' }}>
+          <span style={{ fontSize: '9px', letterSpacing: '0.1em', color: 'var(--muted)', textTransform: 'uppercase', border: '0.5px solid rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '999px' }}>
             {fix.fixture.status.short}
           </span>
         </div>
@@ -148,10 +148,10 @@ function FinishedCard({ fix, teamRanks = {} }: { fix: ApiFixture; teamRanks?: Re
         <TeamBadge team={fix.teams.home} dim={fix.teams.away.winner === true} />
         <div style={{ textAlign: 'center', minWidth: '66px', flexShrink: 0 }}>
           <div style={{
-            fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '2rem', fontWeight: 300,
-            color: 'var(--white)', lineHeight: 1, letterSpacing: '0.06em', fontVariantNumeric: 'tabular-nums',
+            fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '2rem', fontWeight: 700,
+            color: 'var(--white)', lineHeight: 1, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums',
           }}>
-            {home}<span style={{ color: 'var(--gold)', opacity: 0.45, margin: '0 2px' }}>–</span>{away}
+            {home}<span style={{ color: 'var(--gold)', opacity: 0.4, margin: '0 3px', fontWeight: 300 }}>–</span>{away}
           </div>
         </div>
         <TeamBadge team={fix.teams.away} dim={fix.teams.home.winner === true} align="right" />

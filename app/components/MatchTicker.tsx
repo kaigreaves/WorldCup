@@ -90,39 +90,52 @@ export default function MatchTicker({ fixtures }: { fixtures: ApiFixture[] }) {
   return (
     <div style={{
       position: 'sticky', top: 'calc(56px + env(safe-area-inset-top))', zIndex: 90,
-      background: 'var(--navy)', borderBottom: '1px solid var(--gold-border)',
-      display: 'flex', alignItems: 'center', height: '44px', gap: 0,
+      background: 'rgba(0,5,16,0.80)',
+      backdropFilter: 'blur(40px) saturate(200%)',
+      WebkitBackdropFilter: 'blur(40px) saturate(200%)',
+      borderBottom: '0.5px solid rgba(201,168,76,0.15)',
+      display: 'flex', alignItems: 'center', height: '48px', gap: '6px',
+      padding: '0 8px',
     }}>
+      {/* Prev day arrow — circular glass button */}
       <button
         onClick={() => setDayIndex(i => Math.max(0, i - 1))}
         disabled={safeIndex === 0}
         style={{
-          flexShrink: 0, width: '36px', height: '100%', background: 'none', border: 'none',
-          borderRight: '1px solid var(--gold-border)',
-          color: safeIndex === 0 ? 'var(--muted-2)' : 'var(--gold)',
-          cursor: safeIndex === 0 ? 'default' : 'pointer', fontSize: '12px',
+          flexShrink: 0, width: '28px', height: '28px', border: 'none',
+          borderRadius: '50%',
+          background: safeIndex === 0 ? 'transparent' : 'rgba(255,255,255,0.06)',
+          color: safeIndex === 0 ? 'rgba(255,255,255,0.15)' : 'var(--gold)',
+          cursor: safeIndex === 0 ? 'default' : 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '14px', lineHeight: 1,
+          transition: 'background 0.15s ease',
+          WebkitTapHighlightColor: 'transparent',
         }}
       >‹</button>
 
-      <div style={{
-        flexShrink: 0, padding: '0 12px', borderRight: '1px solid var(--gold-border)',
-        height: '100%', display: 'flex', alignItems: 'center',
-      }}>
+      {/* Date pill chip */}
+      <div style={{ flexShrink: 0 }}>
         <span style={{
-          fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase',
-          color: 'var(--gold)', fontFamily: 'Inter, sans-serif', fontWeight: 500, whiteSpace: 'nowrap',
+          display: 'inline-flex', alignItems: 'center',
+          fontSize: '9px', letterSpacing: '0.16em', textTransform: 'uppercase',
+          color: 'var(--gold)', fontWeight: 600, whiteSpace: 'nowrap',
+          background: 'rgba(201,168,76,0.10)',
+          border: '0.5px solid rgba(201,168,76,0.28)',
+          borderRadius: '999px',
+          padding: '3px 9px',
         }}>
           {current.label}
         </span>
       </div>
 
+      {/* Scrollable match strip */}
       <div style={{
         flex: 1, overflowX: 'auto', display: 'flex', alignItems: 'center',
-        gap: '1px', padding: '0 4px', height: '100%', scrollbarWidth: 'none',
+        gap: '2px', padding: '0 2px', height: '100%', scrollbarWidth: 'none',
         WebkitOverflowScrolling: 'touch',
       }}>
-        {current.matches.map(f => {
+        {current.matches.map((f, idx) => {
           const isLive = LIVE.has(f.fixture.status.short);
           const notStarted = f.fixture.status.short === 'NS';
           const homeGoals = f.goals.home ?? 0;
@@ -131,51 +144,63 @@ export default function MatchTicker({ fixtures }: { fixtures: ApiFixture[] }) {
             ? new Date(f.fixture.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
             : null;
           return (
-            <div key={f.fixture.id} style={{
-              display: 'flex', alignItems: 'center', gap: '6px', padding: '0 10px',
-              height: '100%', borderRight: '1px solid var(--gold-border)', flexShrink: 0,
-            }}>
-              {f.teams.home.logo && (
-                <Image src={f.teams.home.logo} alt="" width={14} height={14} style={{ objectFit: 'contain', opacity: 0.85 }} />
+            <div key={f.fixture.id} style={{ display: 'contents' }}>
+              {idx > 0 && (
+                <span style={{ width: '1px', height: '18px', background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
               )}
-              <span style={{ fontSize: '11px', color: 'var(--muted)', whiteSpace: 'nowrap', fontFamily: 'Inter, sans-serif', letterSpacing: '0.04em' }}>
-                {teamAbbr(f.teams.home.name)}
-              </span>
-              <span style={{
-                fontSize: notStarted ? '10px' : '12px',
-                fontFamily: 'system-ui, -apple-system, sans-serif',
-                fontWeight: 500,
-                color: isLive ? '#4ade80' : notStarted ? 'var(--gold)' : 'var(--white)',
-                letterSpacing: '0.05em',
-                minWidth: '34px', textAlign: 'center', whiteSpace: 'nowrap',
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px',
+                borderRadius: '999px',
+                background: isLive ? 'rgba(74,222,128,0.07)' : 'transparent',
+                flexShrink: 0,
               }}>
-                {notStarted ? kickoff : `${homeGoals}–${awayGoals}`}
-              </span>
-              <span style={{ fontSize: '11px', color: 'var(--muted)', whiteSpace: 'nowrap', fontFamily: 'Inter, sans-serif', letterSpacing: '0.04em' }}>
-                {teamAbbr(f.teams.away.name)}
-              </span>
-              {f.teams.away.logo && (
-                <Image src={f.teams.away.logo} alt="" width={14} height={14} style={{ objectFit: 'contain', opacity: 0.85 }} />
-              )}
-              {isLive && (
-                <span style={{ fontSize: '8px', color: '#4ade80', letterSpacing: '0.1em' }}>
-                  {f.fixture.status.elapsed ?? ''}′
+                {f.teams.home.logo && (
+                  <Image src={f.teams.home.logo} alt="" width={13} height={13} style={{ objectFit: 'contain', opacity: 0.85 }} />
+                )}
+                <span style={{ fontSize: '10.5px', color: 'var(--muted)', whiteSpace: 'nowrap', letterSpacing: '0.03em', fontVariantNumeric: 'tabular-nums' }}>
+                  {teamAbbr(f.teams.home.name)}
                 </span>
-              )}
+                <span style={{
+                  fontSize: notStarted ? '10px' : '11.5px',
+                  fontWeight: notStarted ? 400 : 700,
+                  fontVariantNumeric: 'tabular-nums',
+                  color: isLive ? '#4ade80' : notStarted ? 'var(--gold)' : 'var(--white)',
+                  letterSpacing: notStarted ? '0.02em' : '-0.01em',
+                  minWidth: '30px', textAlign: 'center', whiteSpace: 'nowrap',
+                }}>
+                  {notStarted ? kickoff : `${homeGoals}–${awayGoals}`}
+                </span>
+                <span style={{ fontSize: '10.5px', color: 'var(--muted)', whiteSpace: 'nowrap', letterSpacing: '0.03em', fontVariantNumeric: 'tabular-nums' }}>
+                  {teamAbbr(f.teams.away.name)}
+                </span>
+                {f.teams.away.logo && (
+                  <Image src={f.teams.away.logo} alt="" width={13} height={13} style={{ objectFit: 'contain', opacity: 0.85 }} />
+                )}
+                {isLive && (
+                  <span style={{ fontSize: '8px', color: '#4ade80', letterSpacing: '0.06em', fontVariantNumeric: 'tabular-nums' }}>
+                    {f.fixture.status.elapsed ?? ''}′
+                  </span>
+                )}
+              </div>
             </div>
           );
         })}
       </div>
 
+      {/* Next day arrow */}
       <button
         onClick={() => setDayIndex(i => Math.min(days.length - 1, i + 1))}
         disabled={safeIndex === days.length - 1}
         style={{
-          flexShrink: 0, width: '36px', height: '100%', background: 'none', border: 'none',
-          borderLeft: '1px solid var(--gold-border)',
-          color: safeIndex === days.length - 1 ? 'var(--muted-2)' : 'var(--gold)',
-          cursor: safeIndex === days.length - 1 ? 'default' : 'pointer', fontSize: '12px',
+          flexShrink: 0, width: '28px', height: '28px', border: 'none',
+          borderRadius: '50%',
+          background: safeIndex === days.length - 1 ? 'transparent' : 'rgba(255,255,255,0.06)',
+          color: safeIndex === days.length - 1 ? 'rgba(255,255,255,0.15)' : 'var(--gold)',
+          cursor: safeIndex === days.length - 1 ? 'default' : 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '14px', lineHeight: 1,
+          transition: 'background 0.15s ease',
+          WebkitTapHighlightColor: 'transparent',
         }}
       >›</button>
     </div>
