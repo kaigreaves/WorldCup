@@ -30,7 +30,7 @@ function posLabel(pos: string): string {
 
 interface GraphPoint { cumulativePts: number; legacyPts: number; round: string; }
 
-function LegacyGraph({ history, skeleton = false }: { history: GraphPoint[]; skeleton?: boolean }) {
+function LegacyGraph({ history, rank, skeleton = false }: { history: GraphPoint[]; rank: number; skeleton?: boolean }) {
   // Always start from 0 at tournament start
   const pts: GraphPoint[] = [{ cumulativePts: 0, legacyPts: 0, round: 'START' }, ...history];
 
@@ -77,15 +77,20 @@ function LegacyGraph({ history, skeleton = false }: { history: GraphPoint[]; ske
 
       {points.map(({ x, y, m }, i) => {
         const isStart = i === 0;
+        const isLast = i === points.length - 1;
         return (
           <g key={i}>
-            {!isStart && (
-              <text x={x} y={y - 7} textAnchor="middle" fontSize="8"
-                fill="rgba(201,168,76,0.9)" fontFamily="system-ui,-apple-system,sans-serif" fontWeight="600">
-                +{m.legacyPts}
+            {/* Label above dot: rank on last point, nothing on intermediate, nothing on start */}
+            {isLast && (
+              <text x={x} y={y - 8} textAnchor="middle" fontSize="9"
+                fill="rgba(201,168,76,1)" fontFamily="system-ui,-apple-system,sans-serif" fontWeight="700"
+                letterSpacing="-0.02em">
+                #{rank}
               </text>
             )}
-            <circle cx={x} cy={y} r={isStart ? 2 : 3} fill={isStart ? 'rgba(201,168,76,0.4)' : 'var(--gold)'} opacity="0.9" />
+            <circle cx={x} cy={y} r={isLast ? 4 : isStart ? 2 : 2.5}
+              fill={isLast ? 'var(--gold)' : isStart ? 'rgba(201,168,76,0.3)' : 'rgba(201,168,76,0.6)'}
+              opacity="0.95" />
             <text x={x} y={H - PAD.bottom + 13} textAnchor="middle" fontSize="7"
               fill="rgba(255,255,255,0.4)" fontFamily="system-ui,-apple-system,sans-serif" letterSpacing="0.05em">
               {isStart ? 'KO' : roundShort(m.round)}
@@ -369,7 +374,7 @@ export default function PlayerCard({
             {history === null ? (
               // Instant skeleton: straight line from 0 to current score
               entry.legacyScore > 0
-                ? <LegacyGraph history={[{ cumulativePts: entry.legacyScore, legacyPts: entry.legacyScore, round: 'now' }]} skeleton />
+                ? <LegacyGraph history={[{ cumulativePts: entry.legacyScore, legacyPts: entry.legacyScore, round: 'now' }]} rank={entry.rank} skeleton />
                 : <div style={{ height: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div style={{ fontSize: '10px', color: 'var(--muted)', letterSpacing: '0.1em' }}>LOADING…</div>
                   </div>
@@ -378,7 +383,7 @@ export default function PlayerCard({
                 <div style={{ fontSize: '10px', color: 'var(--muted)', letterSpacing: '0.08em' }}>No match data yet</div>
               </div>
             ) : (
-              <LegacyGraph history={history} />
+              <LegacyGraph history={history} rank={entry.rank} />
             )}
           </div>
 
