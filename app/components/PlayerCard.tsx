@@ -104,93 +104,170 @@ function LegacyGraph({ history, rank, skeleton = false }: { history: GraphPoint[
 
 // ── Share card generator ──────────────────────────────────────────────────────
 
-async function shareCard(entry: LegacyEntry, statPills: string[]) {
+async function shareCard(entry: LegacyEntry, statPills: string[], history: PlayerMatchStat[] | null) {
   try { navigator.vibrate?.(10); } catch {}
 
-  const W = 600, H = 340;
+  // Portrait card matching the on-screen player card shape
+  const SCALE = 2; // retina
+  const W = 400, H = 580;
   const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
+  canvas.width = W * SCALE; canvas.height = H * SCALE;
   const ctx = canvas.getContext('2d')!;
+  ctx.scale(SCALE, SCALE);
 
-  // Background gradient
+  // Rounded card background
+  const R = 20;
+  ctx.beginPath();
+  ctx.moveTo(R, 0); ctx.lineTo(W - R, 0);
+  ctx.quadraticCurveTo(W, 0, W, R);
+  ctx.lineTo(W, H - R); ctx.quadraticCurveTo(W, H, W - R, H);
+  ctx.lineTo(R, H); ctx.quadraticCurveTo(0, H, 0, H - R);
+  ctx.lineTo(0, R); ctx.quadraticCurveTo(0, 0, R, 0);
+  ctx.closePath();
+  ctx.save(); ctx.clip();
+
+  // Background
   const bg = ctx.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0, '#00112B');
-  bg.addColorStop(0.6, '#001744');
-  bg.addColorStop(1, '#002060');
+  bg.addColorStop(0, '#000A1C');
+  bg.addColorStop(1, '#001030');
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  // Radial glow
-  const glow = ctx.createRadialGradient(W * 0.8, 0, 0, W * 0.8, 0, W * 0.7);
-  glow.addColorStop(0, 'rgba(0,35,149,0.4)');
+  // Subtle radial glow top-right
+  const glow = ctx.createRadialGradient(W * 0.85, 0, 0, W * 0.85, 0, W * 0.7);
+  glow.addColorStop(0, 'rgba(0,35,149,0.3)');
   glow.addColorStop(1, 'rgba(0,35,149,0)');
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, W, H);
 
-  // Gold top bar
-  const bar = ctx.createLinearGradient(0, 0, W * 0.6, 0);
-  bar.addColorStop(0, '#C9A84C');
-  bar.addColorStop(1, 'rgba(201,168,76,0)');
-  ctx.fillStyle = bar;
-  ctx.fillRect(0, 0, W, 2);
-
-  // Rank number (huge, ghost)
-  ctx.font = '700 180px -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif';
-  ctx.fillStyle = 'rgba(201,168,76,0.06)';
+  // Ghost rank number (background)
+  ctx.font = `200 ${entry.rank < 10 ? 220 : 180}px -apple-system, sans-serif`;
+  ctx.fillStyle = 'rgba(201,168,76,0.05)';
   ctx.textAlign = 'right';
-  ctx.fillText(`#${entry.rank}`, W - 20, H - 20);
+  ctx.fillText(`#${entry.rank}`, W + 10, H - 10);
 
-  // Eyebrow label
-  ctx.font = '500 11px -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif';
-  ctx.fillStyle = '#C9A84C';
+  // Tricolor stripe at top
+  const stripe = ctx.createLinearGradient(0, 0, W, 0);
+  stripe.addColorStop(0, '#0023A0');
+  stripe.addColorStop(0.45, '#C9A84C');
+  stripe.addColorStop(1, '#EF3340');
+  ctx.fillStyle = stripe;
+  ctx.fillRect(0, 0, W, 3);
+
+  const PAD = 28;
+
+  // Eyebrow
+  ctx.font = '500 9px -apple-system, sans-serif';
+  ctx.fillStyle = 'rgba(201,168,76,0.75)';
   ctx.textAlign = 'left';
-  ctx.fillText('FIFA WORLD CUP 2026  ·  LEGACY TRACKER', 36, 48);
+  ctx.letterSpacing = '0.12em';
+  ctx.fillText('FIFA WORLD CUP 2026  ·  LEGACY', PAD, 30);
+  ctx.letterSpacing = '0em';
 
   // Player name
-  ctx.font = `700 ${entry.name.length > 12 ? 52 : 62}px -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif`;
+  const nameFontSize = entry.name.length > 14 ? 34 : entry.name.length > 10 ? 40 : 46;
+  ctx.font = `700 ${nameFontSize}px -apple-system, sans-serif`;
   ctx.fillStyle = '#FFFFFF';
-  ctx.fillText(entry.name, 36, 138);
+  ctx.fillText(entry.name, PAD, 80);
 
-  // Team name
-  ctx.font = '400 16px -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif';
+  // Team name + position
+  ctx.font = '400 14px -apple-system, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.45)';
-  ctx.fillText(entry.teamName, 36, 168);
+  ctx.fillText(entry.teamName, PAD, 102);
 
-  // Gold divider
-  ctx.strokeStyle = 'rgba(201,168,76,0.3)';
-  ctx.lineWidth = 0.5;
-  ctx.beginPath(); ctx.moveTo(36, 186); ctx.lineTo(W - 36, 186); ctx.stroke();
+  const pos = entry.position === 'G' ? 'GK' : entry.position === 'D' ? 'DEF' : entry.position === 'M' ? 'MID' : 'FWD';
+  ctx.font = '500 9px -apple-system, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  const teamW = ctx.measureText(entry.teamName).width;
+  ctx.fillText(`  ·  ${pos}`, PAD + teamW + 2, 102);
 
-  // Stats row
-  const statX = 36;
-  let cursor = statX;
-  const statY = 230;
-  ctx.font = '600 13px -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif';
-  for (const stat of statPills.slice(0, 4)) {
+  // Rank + score row
+  ctx.font = '200 72px -apple-system, sans-serif';
+  ctx.fillStyle = '#C9A84C';
+  ctx.textAlign = 'left';
+  ctx.fillText(`#${entry.rank}`, PAD, 178);
+
+  const rankW = ctx.measureText(`#${entry.rank}`).width;
+  ctx.font = '300 36px -apple-system, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.fillText(`${entry.legacyScore}`, PAD + rankW + 16, 170);
+
+  ctx.font = '500 8px -apple-system, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.letterSpacing = '0.1em';
+  ctx.fillText('LEGACY PTS', PAD + rankW + 18, 186);
+  ctx.letterSpacing = '0em';
+
+  // Stat pills
+  let pillX = PAD;
+  const pillY = 212;
+  ctx.font = '600 11px -apple-system, sans-serif';
+  for (const stat of statPills.slice(0, 5)) {
+    const tw = ctx.measureText(stat).width;
+    const pw = tw + 16, ph = 20, pr = 5;
+    ctx.fillStyle = 'rgba(201,168,76,0.1)';
+    ctx.strokeStyle = 'rgba(201,168,76,0.3)';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.roundRect(pillX, pillY - ph + 5, pw, ph, pr);
+    ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#C9A84C';
-    ctx.fillText(stat, cursor, statY);
-    cursor += ctx.measureText(stat).width + 20;
+    ctx.fillText(stat, pillX + 8, pillY);
+    pillX += pw + 8;
   }
 
-  // Legacy score (right side)
-  ctx.font = '200 80px -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif';
-  ctx.fillStyle = 'rgba(201,168,76,0.9)';
-  ctx.textAlign = 'right';
-  ctx.fillText(`${entry.legacyScore}`, W - 36, 240);
-  ctx.font = '500 10px -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif';
-  ctx.fillStyle = 'rgba(255,255,255,0.3)';
-  ctx.fillText('LEGACY PTS', W - 36, 262);
+  // Divider
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath(); ctx.moveTo(PAD, 238); ctx.lineTo(W - PAD, 238); ctx.stroke();
 
-  // Rank badge bottom-left
-  ctx.font = '300 14px -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif';
-  ctx.fillStyle = 'rgba(201,168,76,0.6)';
-  ctx.textAlign = 'left';
-  ctx.fillText(`RANK #${entry.rank}`, 36, 300);
+  // Match history (up to 5)
+  if (history && history.length > 0) {
+    const matches = history.slice(-5);
+    const rowH = 34;
+    matches.forEach((m, i) => {
+      const y = 258 + i * rowH;
+      // Round badge
+      const round = (() => {
+        const r = m.round.toLowerCase();
+        if (r.includes('final') && !r.includes('semi') && !r.includes('quarter')) return 'FINAL';
+        if (r.includes('semi')) return 'SF';
+        if (r.includes('quarter')) return 'QF';
+        if (r.includes('16')) return 'R16';
+        if (r.includes('32')) return 'R32';
+        return 'GS';
+      })();
 
-  // Bottom watermark
-  ctx.font = '400 10px -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif';
+      ctx.font = '400 12px -apple-system, sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.65)';
+      ctx.textAlign = 'left';
+      ctx.fillText(`vs ${m.opponent}`, PAD, y + 14);
+
+      ctx.font = '500 8px -apple-system, sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      const vsW = ctx.measureText(`vs ${m.opponent}`).width;
+      ctx.fillText(` · ${round}`, PAD + vsW, y + 14);
+
+      ctx.font = '600 13px -apple-system, sans-serif';
+      ctx.fillStyle = '#C9A84C';
+      ctx.textAlign = 'right';
+      ctx.fillText(`+${m.legacyPts}`, W - PAD, y + 14);
+
+      if (i < matches.length - 1) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath(); ctx.moveTo(PAD, y + rowH - 2); ctx.lineTo(W - PAD, y + rowH - 2); ctx.stroke();
+      }
+    });
+  }
+
+  // Watermark
+  ctx.font = '400 9px -apple-system, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.15)';
-  ctx.fillText('glacier.sports', 36, 324);
+  ctx.textAlign = 'left';
+  ctx.fillText('glacier.sports', PAD, H - 16);
+
+  ctx.restore();
 
   // Share or download
   canvas.toBlob(async (blob) => {
@@ -212,23 +289,26 @@ async function shareCard(entry: LegacyEntry, statPills: string[]) {
 export default function PlayerCard({
   entry,
   onClose,
+  preloadedHistory = null,
 }: {
   entry: LegacyEntry;
   onClose: () => void;
+  preloadedHistory?: PlayerMatchStat[] | null;
 }) {
-  const [history, setHistory] = useState<PlayerMatchStat[] | null>(null);
+  const [history, setHistory] = useState<PlayerMatchStat[] | null>(preloadedHistory);
   const [exiting, setExiting] = useState(false);
   const [redditComment, setRedditComment] = useState<RedditComment | null>(null);
 
-  // Fetch match history
+  // Fetch match history only if not already preloaded
   useEffect(() => {
+    if (preloadedHistory !== null) return;
     fetch(`/api/player/${entry.playerId}`)
       .then(r => r.ok ? r.json() : null)
       .then((data: { matchHistory: PlayerMatchStat[] } | null) => {
         if (data) setHistory(data.matchHistory);
       })
       .catch(() => setHistory([]));
-  }, [entry.playerId]);
+  }, [entry.playerId, preloadedHistory]);
 
   // Reddit comment for this player
   useEffect(() => {
@@ -452,7 +532,7 @@ export default function PlayerCard({
             World Cup 2026 · Legacy
           </span>
           <button
-            onClick={e => { e.stopPropagation(); shareCard(entry, statPills); }}
+            onClick={e => { e.stopPropagation(); shareCard(entry, statPills, history); }}
             style={{
               background: 'rgba(201,168,76,0.1)',
               border: '0.5px solid rgba(201,168,76,0.3)',

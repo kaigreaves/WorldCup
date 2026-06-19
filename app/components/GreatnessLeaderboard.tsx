@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { subscribeReddit } from '../lib/reddit-store';
 import type { LegacyEntry } from '../lib/api';
 import type { PerformerEntry } from '../lib/reddit-client';
+import type { PlayerMatchStat } from '../api/player/[playerId]/route';
 import PlayerCard from './PlayerCard';
 
 // ── Position label ────────────────────────────────────────────────────────────
@@ -148,6 +149,20 @@ export default function GreatnessLeaderboard({
   const [collapsed, setCollapsed] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<LegacyEntry | null>(null);
   const titleRef = useRef<HTMLDivElement>(null);
+  const historyCache = useRef<Map<number, PlayerMatchStat[]>>(new Map());
+  const inflight = useRef<Set<number>>(new Set());
+
+  const prefetchPlayer = useCallback((playerId: number) => {
+    if (historyCache.current.has(playerId) || inflight.current.has(playerId)) return;
+    inflight.current.add(playerId);
+    fetch(`/api/player/${playerId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then((data: { matchHistory: PlayerMatchStat[] } | null) => {
+        if (data) historyCache.current.set(playerId, data.matchHistory);
+      })
+      .catch(() => {})
+      .finally(() => inflight.current.delete(playerId));
+  }, []);
 
   // Ask for notification permission once on first load
   useEffect(() => { requestNotificationPermission(); }, []);
@@ -175,24 +190,6 @@ export default function GreatnessLeaderboard({
 
   return (
     <section>
-      {/* ── DEPLOYMENT VERIFICATION BANNER ── */}
-      <div style={{
-        background: 'red',
-        color: 'white',
-        fontFamily: 'monospace',
-        fontSize: '13px',
-        fontWeight: 700,
-        padding: '10px 16px',
-        textAlign: 'center',
-        letterSpacing: '0.05em',
-      }}>
-        TEST BUILD V1
-        <div style={{ fontSize: '10px', fontWeight: 400, marginTop: '2px', opacity: 0.85 }}>
-          commit: 2fbe3681c0b7c5fe6f987dfa6c5626be48c61649
-        </div>
-      </div>
-      {/* ── END DEPLOYMENT VERIFICATION BANNER ── */}
-
       {/* Collapsed title shown in nav bar area when scrolled past */}
       {!compact && collapsed && (
         <div style={{
@@ -267,6 +264,7 @@ export default function GreatnessLeaderboard({
           {ranked.map((entry, i) => (
             <div
               key={entry.playerId}
+              onPointerDown={() => prefetchPlayer(entry.playerId)}
               onClick={() => { try { navigator.vibrate?.(8); } catch {} setSelectedPlayer(entry); }}
               style={{
                 borderBottom: i < ranked.length - 1 ? '0.5px solid rgba(255,255,255,0.06)' : 'none',
@@ -289,7 +287,11 @@ export default function GreatnessLeaderboard({
       {/* Rendered outside overflow:hidden container — iOS WebKit clips fixed
           descendants when a parent has overflow:hidden + border-radius */}
       {selectedPlayer && (
-        <PlayerCard entry={selectedPlayer} onClose={() => setSelectedPlayer(null)} />
+        <PlayerCard
+          entry={selectedPlayer}
+          preloadedHistory={historyCache.current.get(selectedPlayer.playerId) ?? null}
+          onClose={() => setSelectedPlayer(null)}
+        />
       )}
     </section>
   );

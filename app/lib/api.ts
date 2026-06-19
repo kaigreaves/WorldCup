@@ -716,25 +716,25 @@ export async function computeLegacyLeaderboard(
   // ── Enforce keeper/defender constraints ───────────────────────────────────
   // Max 3 total non-outfield in list; always at least 1
 
-  const top20: LegacyEntry[] = [];
+  const top25: LegacyEntry[] = [];
   let nonOutfieldCount = 0;
 
   for (const entry of sorted) {
     const isNonOutfield = entry.position === 'G' || entry.position === 'D';
     if (isNonOutfield && nonOutfieldCount >= 3) continue;
-    top20.push(entry);
+    top25.push(entry);
     if (isNonOutfield) nonOutfieldCount++;
-    if (top20.length >= 20) break;
+    if (top25.length >= 25) break;
   }
 
   // Ensure at least 1 non-outfield player
   if (nonOutfieldCount === 0) {
     const bestKeeper = sorted.find(e => e.position === 'G' || e.position === 'D');
-    if (bestKeeper && top20.length >= 20) top20[19] = bestKeeper;
-    else if (bestKeeper) top20.push(bestKeeper);
+    if (bestKeeper && top25.length >= 25) top25[24] = bestKeeper;
+    else if (bestKeeper) top25.push(bestKeeper);
   }
 
-  return top20
+  return top25
     .sort((a, b) => b.legacyScore - a.legacyScore || a.playerId - b.playerId)
     .map((e, i) => ({ ...e, rank: i + 1 }));
 }
