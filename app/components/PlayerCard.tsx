@@ -266,13 +266,15 @@ export default function PlayerCard({
       onClick={dismiss}
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
-        height: '100dvh',
         background: 'rgba(0,10,28,0.92)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 'max(20px, env(safe-area-inset-top, 20px)) 20px max(20px, env(safe-area-inset-bottom, 20px))',
         overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '20px',
+        paddingTop: 'max(20px, env(safe-area-inset-top, 20px))',
+        paddingBottom: 'max(20px, env(safe-area-inset-bottom, 20px))',
         animation: exiting ? 'fadeOut 0.35s ease forwards' : 'fadeIn 0.2s ease both',
       }}
     >
@@ -286,6 +288,7 @@ export default function PlayerCard({
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: '400px',
+          margin: 'auto',
           background: 'rgba(0,10,28,0.97)',
           border: '0.5px solid rgba(201,168,76,0.35)',
           borderRadius: '20px',
