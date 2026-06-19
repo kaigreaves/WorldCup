@@ -175,6 +175,24 @@ export default function GreatnessLeaderboard({
 
   return (
     <section>
+      {/* ── DEPLOYMENT VERIFICATION BANNER ── */}
+      <div style={{
+        background: 'red',
+        color: 'white',
+        fontFamily: 'monospace',
+        fontSize: '13px',
+        fontWeight: 700,
+        padding: '10px 16px',
+        textAlign: 'center',
+        letterSpacing: '0.05em',
+      }}>
+        TEST BUILD V1
+        <div style={{ fontSize: '10px', fontWeight: 400, marginTop: '2px', opacity: 0.85 }}>
+          commit: 2fbe3681c0b7c5fe6f987dfa6c5626be48c61649
+        </div>
+      </div>
+      {/* ── END DEPLOYMENT VERIFICATION BANNER ── */}
+
       {/* Collapsed title shown in nav bar area when scrolled past */}
       {!compact && collapsed && (
         <div style={{
