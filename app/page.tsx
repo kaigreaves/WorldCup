@@ -102,18 +102,8 @@ export default async function Page() {
       {legacyMoment && <LegacyMomentSplash moment={legacyMoment} />}
 
       {/* Header */}
-      <header style={{
-        borderBottom: '1px solid var(--gold-border)',
-        padding: 'env(safe-area-inset-top) clamp(20px, 4vw, 40px) 0',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        height: 'calc(56px + env(safe-area-inset-top))',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <header className="app-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
           <Image
             src="https://media.api-sports.io/football/leagues/1.png"
             alt="FIFA World Cup 2026"
@@ -122,32 +112,14 @@ export default async function Page() {
             style={{ height: '28px', width: 'auto', objectFit: 'contain' }}
           />
           <div>
-            <div style={{
-              fontFamily: 'system-ui, -apple-system, sans-serif',
-              fontSize: '17px',
-              fontWeight: 600,
-              letterSpacing: '-0.01em',
-              color: 'var(--white)',
-              lineHeight: 1.2,
-            }}>
-              Legacy Tracker
-            </div>
-            <div style={{
-              fontFamily: 'system-ui, -apple-system, sans-serif',
-              fontSize: '11px',
-              fontWeight: 400,
-              color: 'var(--gold)',
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-            }}>
-              FIFA World Cup 2026
-            </div>
+            <div className="header-title">Legacy Tracker</div>
+            <div className="header-subtitle">FIFA World Cup 2026</div>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
           {isLive && (
-            <span style={{ fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 500 }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ade80', display: 'inline-block', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
+            <span className="live-badge">
+              <span className="live-dot" />
               Live
             </span>
           )}

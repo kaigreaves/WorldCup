@@ -133,6 +133,11 @@ export default function SectionPanel({ children }: { children: React.ReactNode }
 
       {/* ── Mobile fixed bottom nav ────────────────────────────────────────── */}
       <nav className="bottom-nav">
+        {/* Sliding gold pill tracks the active tab via spring animation */}
+        <div
+          className="bottom-nav-indicator"
+          style={{ transform: `translateX(calc(${active} * 100%))` }}
+        />
         {TABS.map((tab, i) => (
           <button key={tab.label} onClick={() => go(i)} className={`bottom-nav-btn${active === i ? ' active' : ''}`}>
             <span className="bottom-nav-icon">{active === i ? tab.filled : tab.outline}</span>

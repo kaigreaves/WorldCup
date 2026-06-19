@@ -266,8 +266,9 @@ export default function GreatnessLeaderboard({
               key={entry.playerId}
               onPointerDown={() => prefetchPlayer(entry.playerId)}
               onClick={() => { try { navigator.vibrate?.(8); } catch {} setSelectedPlayer(entry); }}
+              className={`animate-row${i < 12 ? ` stagger-${i + 1}` : ''}`}
               style={{
-                borderBottom: i < ranked.length - 1 ? '0.5px solid rgba(255,255,255,0.06)' : 'none',
+                borderBottom: i < ranked.length - 1 ? '0.5px solid rgba(255,255,255,0.05)' : 'none',
                 cursor: 'pointer',
               }}
             >
