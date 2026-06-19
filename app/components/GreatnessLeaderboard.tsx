@@ -151,6 +151,9 @@ export default function GreatnessLeaderboard({
   const titleRef = useRef<HTMLDivElement>(null);
   const historyCache = useRef<Map<number, PlayerMatchStat[]>>(new Map());
   const inflight = useRef<Set<number>>(new Set());
+  // True after the first Reddit data load — prevents spurious notifications
+  // on page load when stored ranks differ from buzz-adjusted order.
+  const sessionReady = useRef(false);
 
   const prefetchPlayer = useCallback((playerId: number) => {
     if (historyCache.current.has(playerId) || inflight.current.has(playerId)) return;
@@ -170,8 +173,13 @@ export default function GreatnessLeaderboard({
   useEffect(() => {
     return subscribeReddit(data => {
       const { ranked: newRanked, bonuses } = applyBuzzModifier(entries, data.tournamentFavourites);
-      const prev = loadStoredRanks();
-      notifyClimbs(newRanked, prev);
+      if (sessionReady.current) {
+        // Only compare after the first load — avoids firing on page-load
+        // when localStorage has stale ranks from a previous session.
+        const prev = loadStoredRanks();
+        notifyClimbs(newRanked, prev);
+      }
+      sessionReady.current = true;
       saveRanks(newRanked);
       setRanked(newRanked);
       setBuzzBonuses(bonuses);
@@ -298,11 +306,41 @@ export default function GreatnessLeaderboard({
   );
 }
 
-function legacyBadge(rank: number): { label: string; color: string; border: string } | null {
-  if (rank === 1) return { label: 'GOAT Contender', color: 'var(--gold)', border: 'rgba(201,168,76,0.4)' };
-  if (rank <= 3) return { label: 'Elite', color: 'rgba(201,168,76,0.85)', border: 'rgba(201,168,76,0.3)' };
-  if (rank <= 8) return { label: 'Rising Legend', color: 'rgba(255,255,255,0.45)', border: 'rgba(255,255,255,0.15)' };
+// ── Birth years for age-based badges ─────────────────────────────────────────
+// As of June 2026: <26 = Rising Star, ≥26 = Star
+// Special cases override age entirely.
+
+const PLAYER_BIRTH_YEARS: Record<string, number> = {
+  'messi': 1987, 'mbappe': 1998, 'yamal': 2007,
+  'david': 2000, 'ayari': 2004, 'larin': 1995,
+  'just': 2002, 'hwang': 1996, 'baturina': 2000,
+  'havertz': 1999, 'undav': 1996, 'isak': 1999,
+  'rashford': 1997, 'vinicius': 2000, 'nakamura': 1997,
+  'balogun': 2001, 'saliba': 2001, 'manzambi': 2003,
+  'diallo': 2001, 'fayzullaev': 2004, 'romo': 1999,
+};
+
+function playerAge(name: string): number | null {
+  const lower = name.toLowerCase();
+  for (const [key, year] of Object.entries(PLAYER_BIRTH_YEARS)) {
+    if (lower.includes(key)) return 2026 - year;
+  }
   return null;
+}
+
+function legacyBadge(name: string, rank: number): { label: string; color: string; border: string } | null {
+  if (rank > 10) return null;
+  const lower = name.toLowerCase();
+
+  // Named special cases
+  if (lower.includes('messi'))  return { label: 'GOAT', color: 'var(--gold)', border: 'rgba(201,168,76,0.5)' };
+  if (lower.includes('mbappe')) return { label: 'Rising Legend', color: 'rgba(201,168,76,0.85)', border: 'rgba(201,168,76,0.32)' };
+  if (lower.includes('yamal'))  return { label: 'Generational Talent', color: '#a78bfa', border: 'rgba(167,139,250,0.35)' };
+
+  // Age-based for rest of top 10
+  const age = playerAge(name);
+  if (age !== null && age < 26) return { label: 'Rising Star', color: 'rgba(147,197,253,0.9)', border: 'rgba(147,197,253,0.28)' };
+  return { label: 'Star', color: 'rgba(255,255,255,0.55)', border: 'rgba(255,255,255,0.18)' };
 }
 
 function LeaderboardRow({
@@ -318,7 +356,7 @@ function LeaderboardRow({
 }) {
   const topStats = getTopStats(entry);
   const pos = posLabel(entry.position);
-  const badge = !compact ? legacyBadge(entry.rank) : null;
+  const badge = !compact ? legacyBadge(entry.name, entry.rank) : null;
 
   return (
     <div className="lb-row" style={{
