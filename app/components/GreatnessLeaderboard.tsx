@@ -46,12 +46,15 @@ function getTopStats(entry: LegacyEntry): string[] {
     .map(i => i.label);
 }
 
-// ── Buzz modifier (max 3 spots up) ───────────────────────────────────────────
+// ── Buzz modifier — adds real pts to legacyScore based on Reddit activity ─────
+// Talk of the Town (#1 buzz): +5 pts
+// High Buzz (#2–3):           +3 pts
+// Growing (#4–7):             +1 pt
 
 function applyBuzzModifier(entries: LegacyEntry[], performers: PerformerEntry[]): LegacyEntry[] {
   if (!performers.length) return entries;
 
-  function buzzBoost(name: string): number {
+  function buzzBonus(name: string): number {
     const lower = name.toLowerCase();
     const lastName = lower.split(' ').pop() ?? lower;
     const idx = performers.findIndex(p => {
@@ -60,22 +63,24 @@ function applyBuzzModifier(entries: LegacyEntry[], performers: PerformerEntry[])
       return pLower === lower || pLast === lastName || lower.includes(pLast) || pLower.includes(lastName);
     });
     if (idx === -1) return 0;
-    if (idx === 0) return 3;
-    if (idx <= 2) return 2;
+    if (idx === 0) return 5;
+    if (idx <= 2) return 3;
     if (idx <= 6) return 1;
     return 0;
   }
 
-  const withBoost = entries.map((e, i) => ({
-    entry: e,
-    adjustedIdx: Math.max(0, i - buzzBoost(e.name)),
-  }));
-  withBoost.sort((a, b) =>
-    a.adjustedIdx - b.adjustedIdx ||
-    b.entry.legacyScore - a.entry.legacyScore ||
-    a.entry.playerId - b.entry.playerId, // stable tiebreaker: deterministic across all devices
+  const boosted = entries.map(e => {
+    const bonus = buzzBonus(e.name);
+    return bonus > 0
+      ? { ...e, legacyScore: Math.round((e.legacyScore + bonus) * 10) / 10 }
+      : e;
+  });
+
+  boosted.sort((a, b) =>
+    b.legacyScore - a.legacyScore ||
+    a.playerId - b.playerId,
   );
-  return withBoost.map((w, i) => ({ ...w.entry, rank: i + 1 }));
+  return boosted.map((e, i) => ({ ...e, rank: i + 1 }));
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
