@@ -46,30 +46,27 @@ function getTopStats(entry: LegacyEntry): string[] {
     .map(i => i.label);
 }
 
-// ── Buzz modifier — adds real pts to legacyScore based on Reddit activity ─────
-// Talk of the Town (#1 buzz): +5 pts
-// High Buzz (#2–3):           +3 pts
-// Growing (#4–7):             +1 pt
+// ── Buzz modifier — bonus pts based on Tournament Favourites ranking ──────────
+// Rank 1=+5, 2=+4.5, 3=+4, 4=+3.5, 5=+3, 6=+2.5, 7=+2, 8=+1.5, 9=+1, 10=+0.5
+// Uses tournamentFavourites (sorted by buzzScore) — same order as the UI section
 
 function applyBuzzModifier(
   entries: LegacyEntry[],
-  performers: PerformerEntry[],
+  favourites: PerformerEntry[],
 ): { ranked: LegacyEntry[]; bonuses: Map<number, number> } {
-  if (!performers.length) return { ranked: entries, bonuses: new Map() };
+  if (!favourites.length) return { ranked: entries, bonuses: new Map() };
 
   function buzzBonus(name: string): number {
     const lower = name.toLowerCase();
     const lastName = lower.split(' ').pop() ?? lower;
-    const idx = performers.findIndex(p => {
+    const idx = favourites.slice(0, 10).findIndex(p => {
       const pLower = p.name.toLowerCase();
       const pLast = pLower.split(' ').pop() ?? pLower;
       return pLower === lower || pLast === lastName || lower.includes(pLast) || pLower.includes(lastName);
     });
     if (idx === -1) return 0;
-    if (idx === 0) return 5;
-    if (idx <= 2) return 3;
-    if (idx <= 6) return 1;
-    return 0;
+    // rank = idx+1; bonus = 5.5 - rank*0.5
+    return Math.round((5.5 - (idx + 1) * 0.5) * 10) / 10;
   }
 
   const bonuses = new Map<number, number>();
@@ -157,7 +154,7 @@ export default function GreatnessLeaderboard({
 
   useEffect(() => {
     return subscribeReddit(data => {
-      const { ranked: newRanked, bonuses } = applyBuzzModifier(entries, data.performers);
+      const { ranked: newRanked, bonuses } = applyBuzzModifier(entries, data.tournamentFavourites);
       const prev = loadStoredRanks();
       notifyClimbs(newRanked, prev);
       saveRanks(newRanked);
