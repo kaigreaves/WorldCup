@@ -51,8 +51,11 @@ function getTopStats(entry: LegacyEntry): string[] {
 // High Buzz (#2–3):           +3 pts
 // Growing (#4–7):             +1 pt
 
-function applyBuzzModifier(entries: LegacyEntry[], performers: PerformerEntry[]): LegacyEntry[] {
-  if (!performers.length) return entries;
+function applyBuzzModifier(
+  entries: LegacyEntry[],
+  performers: PerformerEntry[],
+): { ranked: LegacyEntry[]; bonuses: Map<number, number> } {
+  if (!performers.length) return { ranked: entries, bonuses: new Map() };
 
   function buzzBonus(name: string): number {
     const lower = name.toLowerCase();
@@ -69,8 +72,10 @@ function applyBuzzModifier(entries: LegacyEntry[], performers: PerformerEntry[])
     return 0;
   }
 
+  const bonuses = new Map<number, number>();
   const boosted = entries.map(e => {
     const bonus = buzzBonus(e.name);
+    if (bonus > 0) bonuses.set(e.playerId, bonus);
     return bonus > 0
       ? { ...e, legacyScore: Math.round((e.legacyScore + bonus) * 10) / 10 }
       : e;
@@ -80,7 +85,7 @@ function applyBuzzModifier(entries: LegacyEntry[], performers: PerformerEntry[])
     b.legacyScore - a.legacyScore ||
     a.playerId - b.playerId,
   );
-  return boosted.map((e, i) => ({ ...e, rank: i + 1 }));
+  return { ranked: boosted.map((e, i) => ({ ...e, rank: i + 1 })), bonuses };
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -142,6 +147,7 @@ export default function GreatnessLeaderboard({
   computedAt?: string;
 }) {
   const [ranked, setRanked] = useState<LegacyEntry[]>(entries);
+  const [buzzBonuses, setBuzzBonuses] = useState<Map<number, number>>(new Map());
   const [collapsed, setCollapsed] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<LegacyEntry | null>(null);
   const titleRef = useRef<HTMLDivElement>(null);
@@ -151,11 +157,12 @@ export default function GreatnessLeaderboard({
 
   useEffect(() => {
     return subscribeReddit(data => {
-      const newRanked = applyBuzzModifier(entries, data.performers);
+      const { ranked: newRanked, bonuses } = applyBuzzModifier(entries, data.performers);
       const prev = loadStoredRanks();
       notifyClimbs(newRanked, prev);
       saveRanks(newRanked);
       setRanked(newRanked);
+      setBuzzBonuses(bonuses);
     });
   }, [entries]);
 
@@ -251,7 +258,7 @@ export default function GreatnessLeaderboard({
                 cursor: 'pointer',
               }}
             >
-              <LeaderboardRow entry={entry} highlight={i < 3} compact={compact} />
+              <LeaderboardRow entry={entry} highlight={i < 3} compact={compact} buzzBonus={buzzBonuses.get(entry.playerId) ?? 0} />
             </div>
           ))}
           {computedAt && !compact && (
@@ -284,10 +291,12 @@ function LeaderboardRow({
   entry,
   highlight,
   compact,
+  buzzBonus,
 }: {
   entry: LegacyEntry;
   highlight: boolean;
   compact: boolean;
+  buzzBonus: number;
 }) {
   const topStats = getTopStats(entry);
   const pos = posLabel(entry.position);
@@ -402,6 +411,21 @@ function LeaderboardRow({
         </div>
         {!compact && (
           <div style={{ fontSize: '8px', color: 'rgba(255,255,255,0.25)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '3px' }}>pts</div>
+        )}
+        {buzzBonus > 0 && (
+          <div style={{
+            fontSize: '8px',
+            color: 'rgba(255,140,0,0.9)',
+            letterSpacing: '0.04em',
+            fontWeight: 600,
+            marginTop: '3px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            gap: '2px',
+          }}>
+            🔥 +{buzzBonus}
+          </div>
         )}
       </div>
     </div>
