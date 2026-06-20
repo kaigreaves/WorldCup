@@ -55,6 +55,7 @@ const getPageData = unstable_cache(
 );
 
 import Image from 'next/image';
+import GlacierLogo from './components/GlacierLogo';
 import GreatnessLeaderboard from './components/GreatnessLeaderboard';
 import GroupStandings from './components/GroupStandings';
 import Matches from './components/Matches';
@@ -103,19 +104,35 @@ export default async function Page() {
 
       {/* Header */}
       <header className="app-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-          <Image
-            src="https://media.api-sports.io/football/leagues/1.png"
-            alt="FIFA World Cup 2026"
-            width={28}
-            height={28}
-            style={{ height: '28px', width: 'auto', objectFit: 'contain' }}
-          />
-          <div>
-            <div className="header-title">Legacy Tracker</div>
-            <div className="header-subtitle">FIFA World Cup 2026</div>
+        {/* Brand mark — logo only, no text cluttering the mark */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+          <GlacierLogo variant="header" />
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1px',
+            paddingLeft: 'var(--space-3)',
+            borderLeft: '1px solid rgba(255,255,255,0.10)',
+          }}>
+            <span style={{
+              fontSize: '15px',
+              fontWeight: 600,
+              letterSpacing: '-0.02em',
+              color: 'var(--white)',
+              lineHeight: 1.2,
+            }}>Legacy Tracker</span>
+            <span style={{
+              fontSize: '10px',
+              fontWeight: 500,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--gold)',
+              lineHeight: 1,
+            }}>FIFA World Cup 2026</span>
           </div>
         </div>
+
+        {/* Right controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
           {isLive && (
             <span className="live-badge">
