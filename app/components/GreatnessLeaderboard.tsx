@@ -144,7 +144,7 @@ async function notifyClimbs(ranked: LegacyEntry[], prev: Record<string, number>)
     const gained = prevRank - entry.rank;
     new Notification(`📈 ${entry.name} climbed ${gained} spot${gained > 1 ? 's' : ''}`, {
       body: `Now #${entry.rank} on the Legacy Leaderboard · ${entry.legacyScore} pts`,
-      icon: '/WC26Logo.png',
+      icon: '/icon-192.png',
       tag: `climb-${entry.name}`,
       silent: false,
     });
@@ -192,9 +192,6 @@ export default function GreatnessLeaderboard({
       .catch(() => {})
       .finally(() => inflight.current.delete(playerId));
   }, []);
-
-  // Ask for notification permission once on first load
-  useEffect(() => { requestNotificationPermission(); }, []);
 
   useEffect(() => {
     const yesterday = loadDailySnapshot(yesterdayKey());
@@ -308,7 +305,7 @@ export default function GreatnessLeaderboard({
             <div
               key={entry.playerId}
               onPointerDown={() => prefetchPlayer(entry.playerId)}
-              onClick={() => { try { navigator.vibrate?.(8); } catch {} setSelectedPlayer(entry); }}
+              onClick={() => { try { navigator.vibrate?.(8); } catch {} requestNotificationPermission(); setSelectedPlayer(entry); }}
               className={`animate-row${i < 12 ? ` stagger-${i + 1}` : ''}`}
               style={{
                 borderBottom: i < ranked.length - 1 ? '0.5px solid rgba(255,255,255,0.05)' : 'none',

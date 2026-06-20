@@ -110,21 +110,43 @@ function LegacyGraph({ history, rank, skeleton = false, gradientId = 'graphFill'
 async function captureAndShare(node: HTMLElement, name: string, rank: number, score: number) {
   try { navigator.vibrate?.(10); } catch {}
   try {
-    // First pass primes the image cache (html-to-image fetches each <img> src
-    // as base64). Second pass produces the final output with all images loaded.
-    await toPng(node, { pixelRatio: 2 });
-    const dataUrl = await toPng(node, {
+    // Wait for web fonts and every image inside the card to finish loading.
+    // Capturing before they're ready produced shifted text / blank logos —
+    // the reason the shared card didn't match the on-screen version.
+    try { await document.fonts.ready; } catch {}
+    await Promise.all(
+      Array.from(node.querySelectorAll('img')).map(img =>
+        (img.complete && img.naturalWidth > 0)
+          ? Promise.resolve()
+          : new Promise<void>(res => { img.onload = img.onerror = () => res(); })
+      )
+    );
+
+    const opts = {
       pixelRatio: 2,
-      // Freeze any in-progress CSS animations so the frame is stable
+      cacheBust: true,
+      // The card uses a semi-transparent fill and sits in a transparent
+      // container. Exported with alpha, Snapchat/Instagram composite it over a
+      // white canvas — that's the "white screen" bug and why the shared image
+      // looked washed out. A solid navy fill makes the PNG opaque and identical
+      // to what's on screen.
+      backgroundColor: '#000a1c',
+      // Freeze any in-progress CSS animations so the frame is stable.
       style: { animation: 'none', transition: 'none' },
-    });
+    };
+    // First pass primes html-to-image's internal image cache; second pass
+    // produces the final, fully-rendered frame.
+    await toPng(node, opts);
+    const dataUrl = await toPng(node, opts);
+
     const blob = await (await fetch(dataUrl)).blob();
     const file = new File([blob], `${name.replace(/\s/g, '-')}-legacy.png`, { type: 'image/png' });
+    const text = `${name} is ranked #${rank} with ${score} legacy pts at the 2026 World Cup. See who's cementing their legacy at glacier.markets`;
     if (navigator.canShare?.({ files: [file] })) {
       await navigator.share({
         files: [file],
         title: `${name} — Legacy Tracker`,
-        text: `${name} is ranked #${rank} with ${score} legacy pts at the 2026 World Cup`,
+        text,
       });
     } else {
       const a = document.createElement('a');
@@ -381,8 +403,13 @@ export default function PlayerCard({
           padding: '10px 20px 16px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <span style={{ fontSize: '8px', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase' }}>
-            World Cup 2026 · Legacy
+          <span style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <span style={{ fontSize: '9px', letterSpacing: '0.16em', color: 'var(--gold)', opacity: 0.85, textTransform: 'lowercase', fontWeight: 600 }}>
+              glacier.markets
+            </span>
+            <span style={{ fontSize: '7.5px', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.22)', textTransform: 'uppercase' }}>
+              World Cup 2026 · Legacy
+            </span>
           </span>
           <button
             onClick={e => { e.stopPropagation(); if (cardRef.current) captureAndShare(cardRef.current, entry.name, entry.rank, entry.legacyScore); }}

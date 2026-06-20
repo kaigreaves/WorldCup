@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   description: "The legacy leaderboard for FIFA World Cup 2026. Who's delivering when it counts.",
   appleWebApp: {
     capable: true,
+    title: "Glacier",
     statusBarStyle: "black-translucent",
   },
   other: {
