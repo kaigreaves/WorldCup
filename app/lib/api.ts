@@ -439,6 +439,12 @@ export async function computeLegacyLeaderboard(
   scorers: ApiScorer[],
   assistsList: ApiScorer[],
   standings: StandingEntry[][],
+  // Optional out-param: populated with the fraction of finished fixtures whose
+  // per-fixture event feed actually loaded (0–1). Lets the page surface a
+  // "scores estimated" signal when api-sports rate-limiting starves the detailed
+  // scoring and the aggregate floor is doing most of the work. Optional so the
+  // other call sites (legacy-moment route, light page) are unaffected.
+  meta?: { eventsCoverage?: number },
 ): Promise<LegacyEntry[]> {
   const finishedFixtures = fixtures.filter(f =>
     f.fixture.status.short === 'FT' ||
@@ -486,6 +492,14 @@ export async function computeLegacyLeaderboard(
     if (i + BATCH_SIZE < finishedFixtures.length) {
       await new Promise(r => setTimeout(r, 100));
     }
+  }
+
+  // Data-quality signal: a finished match always has events (goals/cards/subs),
+  // so an empty events array means that fixture's fetch was rate-limited/failed.
+  // Coverage = fraction that loaded; the page shows a degraded badge when low.
+  if (meta) {
+    const withEvents = allEvents.filter(e => e.length > 0).length;
+    meta.eventsCoverage = finishedFixtures.length === 0 ? 1 : withEvents / finishedFixtures.length;
   }
 
   // ── Per-player accumulators ───────────────────────────────────────────────

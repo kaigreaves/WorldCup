@@ -7,6 +7,7 @@ import type { LegacyEntry } from '../lib/api';
 import type { PlayerMatchStat } from '../api/player/[playerId]/route';
 import { subscribeReddit } from '../lib/reddit-store';
 import type { RedditComment } from '../lib/reddit-client';
+import { isFollowed, toggleFollow } from '../lib/follow';
 
 // ── Round label ───────────────────────────────────────────────────────────────
 
@@ -133,6 +134,11 @@ async function captureAndShare(node: HTMLElement, name: string, rank: number, sc
       backgroundColor: '#000a1c',
       // Freeze any in-progress CSS animations so the frame is stable.
       style: { animation: 'none', transition: 'none' },
+      // Drop interactive controls (Follow/Share) from the exported image — they
+      // are tagged data-no-capture. The shared card should be the trophy, not the
+      // buttons.
+      filter: (node: HTMLElement) =>
+        !(node?.dataset && node.dataset.noCapture === 'true'),
     };
     // First pass primes html-to-image's internal image cache; second pass
     // produces the final, fully-rendered frame.
@@ -172,6 +178,10 @@ export default function PlayerCard({
   const [history, setHistory] = useState<PlayerMatchStat[] | null>(preloadedHistory);
   const [exiting, setExiting] = useState(false);
   const [redditComment, setRedditComment] = useState<RedditComment | null>(null);
+  const [following, setFollowing] = useState(false);
+
+  // Read follow state on mount (localStorage is client-only — avoids SSR mismatch)
+  useEffect(() => { setFollowing(isFollowed(entry.playerId)); }, [entry.playerId]);
 
   // Fetch match history only if not already preloaded
   useEffect(() => {
@@ -411,32 +421,65 @@ export default function PlayerCard({
               World Cup 2026 · Legacy
             </span>
           </span>
-          <button
-            onClick={e => { e.stopPropagation(); if (cardRef.current) captureAndShare(cardRef.current, entry.name, entry.rank, entry.legacyScore); }}
-            style={{
-              background: 'rgba(201,168,76,0.1)',
-              border: '0.5px solid rgba(201,168,76,0.3)',
-              borderRadius: '20px',
-              padding: '5px 12px',
-              fontSize: '10px',
-              fontWeight: 600,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              color: 'var(--gold)',
-              cursor: 'pointer',
-              fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px',
-            }}
-          >
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-              <polyline points="16 6 12 2 8 6" />
-              <line x1="12" y1="2" x2="12" y2="15" />
-            </svg>
-            Share
-          </button>
+          <div data-no-capture="true" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              data-no-capture="true"
+              onClick={e => {
+                e.stopPropagation();
+                try { navigator.vibrate?.(8); } catch {}
+                setFollowing(toggleFollow({ playerId: entry.playerId, name: entry.name }));
+              }}
+              aria-pressed={following}
+              style={{
+                background: following ? 'rgba(201,168,76,0.22)' : 'transparent',
+                border: `0.5px solid ${following ? 'rgba(201,168,76,0.55)' : 'rgba(255,255,255,0.22)'}`,
+                borderRadius: '20px',
+                padding: '5px 12px',
+                fontSize: '10px',
+                fontWeight: 600,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: following ? 'var(--gold)' : 'rgba(255,255,255,0.6)',
+                cursor: 'pointer',
+                fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill={following ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+              {following ? 'Following' : 'Follow'}
+            </button>
+            <button
+              data-no-capture="true"
+              onClick={e => { e.stopPropagation(); if (cardRef.current) captureAndShare(cardRef.current, entry.name, entry.rank, entry.legacyScore); }}
+              style={{
+                background: 'rgba(201,168,76,0.1)',
+                border: '0.5px solid rgba(201,168,76,0.3)',
+                borderRadius: '20px',
+                padding: '5px 12px',
+                fontSize: '10px',
+                fontWeight: 600,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: 'var(--gold)',
+                cursor: 'pointer',
+                fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                <polyline points="16 6 12 2 8 6" />
+                <line x1="12" y1="2" x2="12" y2="15" />
+              </svg>
+              Share
+            </button>
+          </div>
         </div>
       </div>
     </div>

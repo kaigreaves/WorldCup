@@ -34,6 +34,10 @@ interface PageData {
   // ISO timestamp of when the data was fetched. Used to show "last updated"
   // in the UI and to distinguish a real error from a pre-tournament empty state.
   computedAt: string;
+  // True when most per-fixture event feeds failed to load (rate-limited), so the
+  // leaderboard is running on the aggregate scoring floor rather than the full
+  // contextual scores. Drives a "scores estimated" badge — keeping the promise.
+  degraded: boolean;
 }
 
 // Single cache entry for all expensive computation. Vercel Data Cache persists
@@ -46,9 +50,13 @@ const getPageData = unstable_cache(
     const allFixtures = fixtures ?? [];
     const allScorers = scorers ?? [];
     const allAssists = assists ?? [];
-    const legacyEntries = await computeLegacyLeaderboard(allFixtures, allScorers, allAssists, standings);
+    const meta: { eventsCoverage?: number } = {};
+    const legacyEntries = await computeLegacyLeaderboard(allFixtures, allScorers, allAssists, standings, meta);
     const legacyMoment = await computeLegacyMoment(allFixtures, standings, legacyEntries);
-    return { allFixtures, allScorers, allAssists, standings, legacyEntries, legacyMoment, computedAt: new Date().toISOString() };
+    // Degraded when there are scored players but most per-fixture feeds failed:
+    // the board is then leaning on the aggregate floor, so scores are estimates.
+    const degraded = legacyEntries.length > 0 && (meta.eventsCoverage ?? 1) < 0.8;
+    return { allFixtures, allScorers, allAssists, standings, legacyEntries, legacyMoment, computedAt: new Date().toISOString(), degraded };
   },
   ['page-data'],
   { revalidate: 300 },
@@ -66,7 +74,7 @@ import LegacyMomentSplash from './components/LegacyMomentSplash';
 import { RedditDataLoader, PerformersSection, FanVoiceSection, TournamentFavourites } from './components/RedditShell';
 
 export default async function Page() {
-  const { allFixtures, allScorers, allAssists, standings, legacyEntries, legacyMoment, computedAt } = await getPageData();
+  const { allFixtures, allScorers, allAssists, standings, legacyEntries, legacyMoment, computedAt, degraded } = await getPageData();
 
   const teamFlagMap = buildTeamFlagMap(allFixtures);
   const teamRanks = buildTeamRankMap(standings);
@@ -150,7 +158,7 @@ export default async function Page() {
           {[
             /* ── Legacy tab ─────────────────────────────────────── */
             <div key="legacy" style={{ padding: '32px clamp(16px, 4vw, 40px) 40px' }}>
-              <GreatnessLeaderboard entries={legacyEntries} computedAt={computedAt} />
+              <GreatnessLeaderboard entries={legacyEntries} computedAt={computedAt} degraded={degraded} />
               <p style={{ fontSize: '10px', color: 'var(--muted-2)', marginTop: '24px', letterSpacing: '0.08em' }}>
                 Stats via api-sports.io · Fan voice via Reddit · FIFA World Cup 2026
               </p>

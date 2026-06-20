@@ -7,6 +7,7 @@ import type { LegacyEntry } from '../lib/api';
 import type { PerformerEntry } from '../lib/reddit-client';
 import type { PlayerMatchStat } from '../api/player/[playerId]/route';
 import PlayerCard from './PlayerCard';
+import { getFollowed, getSeenRanks, saveSeenRanks, FOLLOW_CHANGE_EVENT } from '../lib/follow';
 
 // ── Position label ────────────────────────────────────────────────────────────
 
@@ -160,20 +161,29 @@ async function requestNotificationPermission() {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+interface FollowView { name: string; rank: number; delta: number | null; isNew: boolean; }
+
 export default function GreatnessLeaderboard({
   entries,
   compact = false,
   computedAt,
+  degraded = false,
 }: {
   entries: LegacyEntry[];
   compact?: boolean;
   computedAt?: string;
+  degraded?: boolean;
 }) {
   const [ranked, setRanked] = useState<LegacyEntry[]>(entries);
   const [buzzBonuses, setBuzzBonuses] = useState<Map<number, number>>(new Map());
   const [dailyDeltas, setDailyDeltas] = useState<Map<number, number>>(new Map());
   const [collapsed, setCollapsed] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<LegacyEntry | null>(null);
+  const [followView, setFollowView] = useState<FollowView[]>([]);
+  // Snapshot of last-seen ranks captured once at mount, so the "since your last
+  // visit" deltas stay stable through this session's buzz updates instead of
+  // flattening to zero the moment we persist the new ranks.
+  const seenAtMount = useRef<Record<string, number> | null>(null);
   const titleRef = useRef<HTMLDivElement>(null);
   const historyCache = useRef<Map<number, PlayerMatchStat[]>>(new Map());
   const inflight = useRef<Set<number>>(new Set());
@@ -228,6 +238,38 @@ export default function GreatnessLeaderboard({
     return () => observer.disconnect();
   }, [compact]);
 
+  // ── Followed-player return trigger ────────────────────────────────────────
+  // Show each followed player's movement since the user's last visit, then
+  // persist the current ranks so next session compares against today.
+  useEffect(() => {
+    if (compact) return;
+    if (seenAtMount.current === null) seenAtMount.current = getSeenRanks();
+
+    function recompute() {
+      const followed = getFollowed();
+      if (followed.length === 0) { setFollowView([]); return; }
+      const seen = seenAtMount.current!;
+      const rows: FollowView[] = followed
+        .map(f => {
+          const e = ranked.find(r => r.playerId === f.playerId);
+          if (!e) return null;
+          const prev = seen[e.name];
+          return { name: e.name, rank: e.rank, delta: prev ? prev - e.rank : null, isNew: !prev };
+        })
+        .filter((r): r is FollowView => r !== null);
+      setFollowView(rows);
+      // Persist latest ranks for the next session (without touching the mount
+      // snapshot that drives this session's deltas).
+      const next = { ...getSeenRanks() };
+      rows.forEach(r => { next[r.name] = r.rank; });
+      saveSeenRanks(next);
+    }
+
+    recompute();
+    window.addEventListener(FOLLOW_CHANGE_EVENT, recompute);
+    return () => window.removeEventListener(FOLLOW_CHANGE_EVENT, recompute);
+  }, [ranked, compact]);
+
   return (
     <section>
       {/* Collapsed title shown in nav bar area when scrolled past */}
@@ -267,6 +309,51 @@ export default function GreatnessLeaderboard({
         </h2>
         <div className="gold-line" style={{ marginTop: '16px', opacity: 0.5 }} />
       </div>
+
+      {/* Followed-player return trigger — "since your last visit" */}
+      {!compact && followView.length > 0 && (
+        <div style={{
+          marginBottom: '20px', padding: '12px 16px', borderRadius: '14px',
+          background: 'rgba(201,168,76,0.05)', border: '0.5px solid rgba(201,168,76,0.18)',
+        }}>
+          <div style={{ fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--gold)', opacity: 0.85, fontWeight: 600, marginBottom: '10px' }}>
+            Your Players · Since Last Visit
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+            {followView.map(r => (
+              <div key={r.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '13px', color: 'var(--white)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: '10px' }}>{r.name}</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                  {r.isNew ? (
+                    <span style={{ fontSize: '10px', color: 'var(--muted)', letterSpacing: '0.04em' }}>now tracking</span>
+                  ) : r.delta! > 0 ? (
+                    <span style={{ fontSize: '11px', color: '#4ade80', fontWeight: 700 }}>▲{r.delta}</span>
+                  ) : r.delta! < 0 ? (
+                    <span style={{ fontSize: '11px', color: '#f87171', fontWeight: 700 }}>▼{Math.abs(r.delta!)}</span>
+                  ) : (
+                    <span style={{ fontSize: '11px', color: 'var(--muted)' }}>—</span>
+                  )}
+                  <span style={{ fontSize: '13px', color: 'var(--gold)', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>#{r.rank}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Degraded data signal — keep the promise: tell the user when scores are estimated */}
+      {!compact && degraded && ranked.length > 0 && (
+        <div style={{
+          marginBottom: '16px', padding: '9px 13px', borderRadius: '10px',
+          background: 'rgba(245,166,35,0.07)', border: '0.5px solid rgba(245,166,35,0.22)',
+          display: 'flex', alignItems: 'center', gap: '9px',
+        }}>
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f5a623', flexShrink: 0 }} />
+          <span style={{ fontSize: '11px', color: 'rgba(255,200,120,0.92)', lineHeight: 1.4 }}>
+            Live feed catching up — some scores are estimated and will refine shortly.
+          </span>
+        </div>
+      )}
 
       {ranked.length === 0 ? (
         <div style={{ padding: '32px 0' }}>
