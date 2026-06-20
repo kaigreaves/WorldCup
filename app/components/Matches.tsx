@@ -10,8 +10,19 @@ function LiveRefresher({ hasLive }: { hasLive: boolean }) {
   const router = useRouter();
   useEffect(() => {
     if (!hasLive) return;
-    const id = setInterval(() => router.refresh(), 5 * 60 * 1000);
-    return () => clearInterval(id);
+    // Only poll while the tab is visible; refresh once on return so a
+    // backgrounded tab never silently hammers the server.
+    const id = setInterval(() => {
+      if (document.visibilityState === 'visible') router.refresh();
+    }, 5 * 60 * 1000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') router.refresh();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [hasLive, router]);
   return null;
 }

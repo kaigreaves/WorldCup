@@ -55,8 +55,20 @@ export default function MatchTicker({ fixtures }: { fixtures: ApiFixture[] }) {
 
   useEffect(() => {
     if (!hasLive) return;
-    const interval = setInterval(() => router.refresh(), 60_000);
-    return () => clearInterval(interval);
+    // Only poll while the tab is actually in front of the user. Backgrounded
+    // tabs skip the refresh (saving server invocations + egress at scale) and
+    // get one immediate refresh when the user returns so they see fresh scores.
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') router.refresh();
+    }, 60_000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') router.refresh();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [hasLive, router]);
 
   const days = useMemo(() => {
