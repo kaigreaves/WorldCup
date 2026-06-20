@@ -1,47 +1,35 @@
 import Image from 'next/image';
 
-type LogoVariant = 'header' | 'splash' | 'footer';
-
-// Asset ratio: 758 × 645 (tight-cropped blue logo)
-const RATIO = 758 / 645;
-
-const VARIANTS: Record<LogoVariant, { height: number }> = {
-  header:  { height: 56  },
-  splash:  { height: 140 },
-  footer:  { height: 32  },
-};
+// Mountain icon mark — asset ratio 729 × 392
+const RATIO = 729 / 392;
 
 interface GlacierLogoProps {
-  variant?: LogoVariant;
-  /** Override height; width scales proportionally (2:1 ratio) */
+  /** Icon height in px; width scales proportionally */
   height?: number;
   className?: string;
   style?: React.CSSProperties;
 }
 
 export default function GlacierLogo({
-  variant = 'header',
-  height,
+  height = 34,
   className,
   style,
 }: GlacierLogoProps) {
-  const base = VARIANTS[variant];
-  const h = height ?? base.height;
+  const h = height;
   const w = Math.round(h * RATIO);
 
   return (
     <Image
-      src="/glacier-logo-transparent.png"
+      src="/glacier-icon.png"
       alt="Glacier"
       width={w}
       height={h}
-      priority={variant === 'header' || variant === 'splash'}
+      priority
       style={{
         height: h,
         width: 'auto',
         maxWidth: w,
         objectFit: 'contain',
-        objectPosition: 'center center',
         display: 'block',
         flexShrink: 0,
         ...style,
