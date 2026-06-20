@@ -244,12 +244,12 @@ header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: env(safe-area-inset-top) clamp(20px, 4vw, 40px) 0 clamp(16px, 4vw, 40px);
-  height: calc(72px + env(safe-area-inset-top));
+  padding: calc(env(safe-area-inset-top) + 10px) clamp(20px, 4vw, 40px) 10px clamp(16px, 4vw, 40px);
+  height: calc(76px + env(safe-area-inset-top));
   background: var(--glass-bg-4);
   backdrop-filter: blur(var(--glass-blur-4));
   -webkit-backdrop-filter: blur(var(--glass-blur-4));
-  border-bottom: 1px solid var(--gold-border);
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.08);
 }
 
 .header-title {

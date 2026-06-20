@@ -6,9 +6,9 @@ type LogoVariant = 'header' | 'splash' | 'footer';
 const RATIO = 758 / 645;
 
 const VARIANTS: Record<LogoVariant, { height: number }> = {
-  header:  { height: 52  },
+  header:  { height: 56  },
   splash:  { height: 140 },
-  footer:  { height: 28  },
+  footer:  { height: 32  },
 };
 
 interface GlacierLogoProps {

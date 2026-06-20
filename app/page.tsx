@@ -104,37 +104,14 @@ export default async function Page() {
 
       {/* Header */}
       <header className="app-header">
-        {/* Brand mark — logo only, no text cluttering the mark */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-          <GlacierLogo variant="header" />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <span style={{
-              fontSize: '15px',
-              fontWeight: 600,
-              letterSpacing: '-0.02em',
-              color: 'var(--white)',
-              lineHeight: 1.2,
-            }}>Legacy Tracker</span>
-            <span style={{
-              fontSize: '10px',
-              fontWeight: 500,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              color: 'var(--gold)',
-              lineHeight: 1,
-            }}>FIFA World Cup 2026</span>
-          </div>
-        </div>
+        <GlacierLogo variant="header" />
 
-        {/* Right controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-          {isLive && (
-            <span className="live-badge">
-              <span className="live-dot" />
-              Live
-            </span>
-          )}
-        </div>
+        {isLive && (
+          <span className="live-badge">
+            <span className="live-dot" />
+            Live
+          </span>
+        )}
       </header>
 
       {/* Score ticker */}
