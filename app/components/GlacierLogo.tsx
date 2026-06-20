@@ -1,17 +1,17 @@
 import Image from 'next/image';
 
-// Mountain icon mark — asset ratio 729 × 392
-const RATIO = 729 / 392;
+// Full wordmark — asset ratio 758 × 645
+const RATIO = 758 / 645;
 
 interface GlacierLogoProps {
-  /** Icon height in px; width scales proportionally */
+  /** Logo height in px; width scales proportionally */
   height?: number;
   className?: string;
   style?: React.CSSProperties;
 }
 
 export default function GlacierLogo({
-  height = 34,
+  height = 56,
   className,
   style,
 }: GlacierLogoProps) {
@@ -20,7 +20,7 @@ export default function GlacierLogo({
 
   return (
     <Image
-      src="/glacier-icon.png"
+      src="/glacier-logo-transparent.png"
       alt="Glacier"
       width={w}
       height={h}

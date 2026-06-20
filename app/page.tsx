@@ -105,7 +105,7 @@ export default async function Page() {
       {/* Header */}
       <header className="app-header">
         <div className="header-brand">
-          <GlacierLogo height={34} />
+          <GlacierLogo height={52} />
           <div className="header-titles">
             <span className="header-title">World Cup Tracker</span>
             <span className="header-eyebrow">2026 · FIFA</span>
