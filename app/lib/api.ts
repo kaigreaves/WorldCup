@@ -662,22 +662,40 @@ export async function computeLegacyLeaderboard(
 
   // ── Consistency bonus for all tracked players ─────────────────────────────
 
-  // Seed match counts from scorer/assist API data (more reliable than fixture player counting)
+  // Seed match counts + fallback scoring from the aggregate scorer/assist feed.
+  // The per-fixture event calls above can be rate-limited in production (api-sports
+  // returns HTTP 200 with a rateLimit error body that Next then caches for up to
+  // 24h), scoring zero goals for any player whose fixtures didn't load — which is
+  // why a prolific scorer can collapse to just the consistency bonus. The
+  // top-scorer/assist lists are two cheap calls that almost always load, so we use
+  // them as a floor: award baseline points for any goals/assists the event loop
+  // didn't already count. When events DO load, the counted totals match the
+  // aggregate, so missingGoals/missingAssists are 0 and this adds nothing — no
+  // double-counting, no regression to the detailed contextual scoring.
   for (const s of [...scorers, ...assistsList]) {
     const st = s.statistics[0];
     if (!st) continue;
-    const p = players.get(s.player.id);
-    if (p) {
-      p.matches = Math.max(p.matches, st.games.appearences ?? 0);
-    } else {
-      // Outfield player not yet in map (0 goals/assists in our events, but in top lists)
-      const entry = getPlayer(
+    let p = players.get(s.player.id);
+    if (!p) {
+      p = getPlayer(
         s.player.id, s.player.name, s.player.photo,
         st.team.name, st.team.logo || teamLogoMap[st.team.name] || '', 'F',
       );
-      entry.matches = st.games.appearences ?? 0;
-      entry.goals = st.goals.total ?? 0;
-      entry.assists = st.goals.assists ?? 0;
+    }
+    p.matches = Math.max(p.matches, st.games.appearences ?? 0);
+
+    const aggGoals = st.goals.total ?? 0;
+    const aggAssists = st.goals.assists ?? 0;
+    const missingGoals = Math.max(0, aggGoals - p.goals);
+    const missingAssists = Math.max(0, aggAssists - p.assists);
+    if (missingGoals > 0 || missingAssists > 0) {
+      // Neutral estimate — no opponent-quality or goal-context data is available
+      // from the aggregate feed, so use the midpoint of the event-based range
+      // (~8 pts/goal, ~5 pts/assist). Enough to rank a real scorer correctly
+      // without overshooting players whose context bonuses we can't see.
+      p.legacyScore += missingGoals * 8 + missingAssists * 5;
+      p.goals = Math.max(p.goals, aggGoals);
+      p.assists = Math.max(p.assists, aggAssists);
     }
   }
 
