@@ -1,3 +1,5 @@
+import { unstable_cache } from 'next/cache';
+
 const BASE = 'https://v3.football.api-sports.io';
 const KEY = process.env.API_SPORTS_KEY ?? '';
 const LEAGUE = 1;
@@ -35,33 +37,80 @@ function logQuota(res: Response, path: string) {
   }
 }
 
-async function apiFetch<T>(path: string, revalidate = 300): Promise<T | null> {
+// ── API quota circuit breaker ──────────────────────────────────────────────────
+// Last-resort guard so a cache failure (or any runaway loop) can never blow the
+// hard 75,000-calls/day api-sports limit. Every response carries the
+// account-global remaining count; when it drops below a safety floor we stop
+// making new network calls and serve degraded (null) data rather than risk a
+// full daily lockout that would take the whole app down at peak.
+// NOTE: this state lives per serverless instance. For strict cross-instance
+// enforcement, promote `quotaRemaining` to a shared store (Vercel KV/Upstash).
+const SAFETY_FLOOR = 2000;        // stop new calls when fewer than this remain today
+const PROBE_INTERVAL_MS = 60_000; // when tripped, allow one probe/min to detect reset
+let quotaRemaining = Number.POSITIVE_INFINITY;
+let lastProbeAt = 0;
+
+function recordQuota(res: Response) {
+  const rem = res.headers.get('X-RateLimit-Requests-Remaining');
+  if (rem != null && rem !== '') {
+    const n = parseInt(rem);
+    if (!Number.isNaN(n)) quotaRemaining = n;
+  }
+}
+
+function breakerOpen(): boolean {
+  if (quotaRemaining > SAFETY_FLOOR) return false;
+  // Quota is critically low. Allow an occasional probe so a daily reset is
+  // detected and normal service resumes; block every other call.
+  const now = Date.now();
+  if (now - lastProbeAt > PROBE_INTERVAL_MS) { lastProbeAt = now; return false; }
+  return true;
+}
+
+// Raw network call — NEVER cached at the HTTP layer (`cache: 'no-store'`). This
+// is the fix for the cache-poisoning bug: api-sports returns HTTP 200 with a
+// `rateLimit` error body when throttled, and Next's Data Cache would otherwise
+// persist that bad 200 for the full revalidate window (up to 24h for fixture
+// detail), silently zeroing real scores. By bypassing the HTTP cache and
+// throwing on any error, the failed response is never stored — caching happens
+// only in the unstable_cache wrapper below, which does not cache rejected
+// promises, so the next request simply retries.
+async function rawFetch<T>(path: string): Promise<T> {
+  let lastErr: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      // Retry uses a cache-busting header (not a query param — api-sports
-      // rejects any unrecognized query param outright, and not `cache: 'no-store'`,
-      // since a `no-store` fetch anywhere in a route forces the *entire* page to
-      // render dynamically on every request, killing 5-minute ISR for everything
-      // else on the page, not just this one call).
-      const reqHeaders = attempt === 0 ? headers : { ...headers, 'X-Retry-Attempt': String(Date.now()) };
-      const res = await fetch(`${BASE}${path}`, { headers: reqHeaders, next: { revalidate } });
+      const res = await fetch(`${BASE}${path}`, { headers, cache: 'no-store' });
+      recordQuota(res);
       logQuota(res, path);
-      if (!res.ok) return null;
+      if (!res.ok) throw new Error(`api-sports HTTP ${res.status}`);
       const json = await res.json() as { response: T; errors?: unknown };
-      if (hasApiError(json.errors)) {
-        if (attempt === 0) {
-          await new Promise(r => setTimeout(r, 1000 + Math.random() * 500));
-          continue;
-        }
-        return null;
-      }
+      if (hasApiError(json.errors)) throw new Error('api-sports error body (likely rate limited)');
       return json.response;
-    } catch {
-      if (attempt === 0) continue;
-      return null;
+    } catch (e) {
+      lastErr = e;
+      if (attempt === 0) { await new Promise(r => setTimeout(r, 1000 + Math.random() * 500)); continue; }
     }
   }
-  return null;
+  throw lastErr ?? new Error('api-sports request failed');
+}
+
+// Cached entry point. A successful response is cached for `revalidate` seconds
+// via unstable_cache (persists across requests AND deployments). `path` MUST be
+// in the key parts — unstable_cache keys on the stringified function, which is
+// identical for every path, so without it all endpoints would collide. On
+// failure rawFetch throws, unstable_cache stores nothing, and we return null so
+// callers degrade gracefully onto the aggregate scoring floor.
+async function apiFetch<T>(path: string, revalidate = 300): Promise<T | null> {
+  if (breakerOpen()) {
+    console.error(`[API-SPORTS] ⛔ circuit breaker OPEN (~${quotaRemaining} calls left today) — skipping ${path}`);
+    return null;
+  }
+  const cached = unstable_cache(() => rawFetch<T>(path), ['api-sports', path], { revalidate });
+  try {
+    return await cached();
+  } catch {
+    return null;
+  }
 }
 
 // ── Types ────────────────────────────────────────────────────────────────────
