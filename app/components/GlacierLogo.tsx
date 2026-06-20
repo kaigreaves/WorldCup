@@ -2,8 +2,8 @@ import Image from 'next/image';
 
 type LogoVariant = 'header' | 'splash' | 'footer';
 
-// Actual asset ratio: 1170 × 963 = 1.215
-const RATIO = 1170 / 963;
+// Asset ratio: 1290 × 1083 (padded) = 1.191
+const RATIO = 1290 / 1083;
 
 const VARIANTS: Record<LogoVariant, { height: number }> = {
   header:  { height: 52  },

@@ -107,13 +107,7 @@ export default async function Page() {
         {/* Brand mark — logo only, no text cluttering the mark */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
           <GlacierLogo variant="header" />
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1px',
-            paddingLeft: 'var(--space-3)',
-            borderLeft: '1px solid rgba(255,255,255,0.10)',
-          }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
             <span style={{
               fontSize: '15px',
               fontWeight: 600,
